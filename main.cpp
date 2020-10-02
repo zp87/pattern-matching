@@ -8,6 +8,8 @@ const unsigned int base = 5;
 
 unsigned int * block_length_array;
 
+unsigned int * reversed_block_length_array;
+
 
 // how many pieces of the block divided into.
 unsigned int number_blocks;
@@ -123,18 +125,12 @@ void identify_different_blocks(unsigned int * first, unsigned int * last, bool *
 
 void block_length_array_generation(std::string pattern, unsigned int block_length){
     block_length_array = new unsigned int[number_blocks];
+    reversed_block_length_array = new unsigned int[number_blocks];
+
     for(int i = 0; i < number_blocks; ++i){
         block_length_array[i] = std::min(block_length, (unsigned int)(pattern.size() - i*block_length));
+        reversed_block_length_array[number_blocks - 1 - i] = block_length_array[i];
     }
-}
-
-// check wheter two arrays contain same values in order.
-bool array_same(unsigned int * arr1, unsigned int * arr2){
-    for(unsigned int i = 0; i < number_blocks; ++i){
-        if(arr1[i] != arr2[i])
-            return false;
-    }
-    return true;
 }
 
 // determine whether is position is legal to switch
@@ -146,63 +142,137 @@ bool legal_position(unsigned int first_block, unsigned int first_off, unsigned i
     return false;
 }
 
-// compute the number for the letter based on offsite and block length
-unsigned int single_number(unsigned int fingerprint, unsigned int offsite, unsigned int block_length){
-    fingerprint = fingerprint % (unsigned int)pow(base, block_length - offsite);
-    return fingerprint / ((unsigned int)pow(base, block_length - offsite - 1));
+//reverse the fingerprint block
+unsigned int reverse_block(unsigned int block){
+    unsigned int result = 0;
+    while(block > 0){
+        result = result * 5 + block % 5;
+        block = block / 5;
+    }
+    return result;
 }
 
-// reverse the text_fingerprint_array based on the block index and offsite.
-void reverse_fingerprint_array(unsigned int * reversal, 
-            unsigned int first_block_index, unsigned int first_offsite,
-            unsigned int last_block_index, unsigned int last_offsite){
-
-    bool indicator = legal_position(first_block_index, first_offsite, last_block_index, last_offsite);
-    unsigned int front = 0, end = 0;
-
-    while(indicator){
-        // compute the correspondings number for the letter.
-        front = single_number(reversal[first_block_index], first_offsite, block_length_array[first_block_index]);
-        end = single_number(reversal[last_block_index], last_offsite, block_length_array[last_block_index]);
-    
-        // swith the position
-        reversal[first_block_index] -= front * (unsigned int)pow(base, block_length_array[first_block_index] - first_offsite - 1);
-        reversal[first_block_index] += end * (unsigned int)pow(base, block_length_array[first_block_index] - first_offsite - 1);
-        reversal[last_block_index] -= end * (unsigned int)pow(base, block_length_array[last_block_index] - last_offsite - 1);
-        reversal[last_block_index] += front * (unsigned int)pow(base, block_length_array[last_block_index] - last_offsite - 1);
-
-        // compute the new position
-        first_offsite += 1;
-        if(first_offsite >= block_length_array[first_block_index]){
-            first_block_index += 1;
-            first_offsite -= block_length_array[first_block_index];
-        }
-        if(last_offsite > 0){
-            last_offsite -= 1;
-        }
-        else{
-            last_offsite = block_length_array[first_block_index] - 1;
-            last_block_index -= 1;
-        }
-        indicator = legal_position(first_block_index, first_offsite, last_block_index, last_offsite);
-    }    
-
-}
-
-//check two arrays are equal.
-bool two_arrays_equal(unsigned int * arr1, unsigned int * arr2){
+//reverse the fingerprint array for each entry.
+void reverse_array_entry(unsigned int * original, unsigned int * reversed){
     for(unsigned int i = 0; i < number_blocks; ++i){
-        if(arr1[i] != arr2[i])
+        reversed[number_blocks - i - 1] = reverse_block(original[i]);
+    }
+}
+
+void retrieve_array(unsigned int * text, unsigned int * result, unsigned int first_block_index, unsigned int first_offsite,
+                    unsigned int last_block_index, unsigned int last_offsite, unsigned int * length_array){
+    unsigned int index = 0;
+    while(index <= last_block_index - first_block_index){
+        if(index == 0){
+            result[index] =text[first_block_index + index]%(unsigned int)(pow(base, length_array[first_block_index + index] - first_offsite));
+            index ++;
+            continue;
+        }
+        if(index == last_block_index - first_block_index){
+
+            result[index] =text[first_block_index + index]/(unsigned int)(pow(base, length_array[first_block_index + index] - last_offsite - 1));
+            index ++;
+            continue;
+        }
+        result[index] = text[first_block_index + index];
+        index ++ ;
+    }
+
+}
+
+bool two_arrays_equal(unsigned int * arr1, unsigned int * arr2, unsigned int length){
+    for(unsigned int i = 0; i < length; i++){
+        if (arr1[i] != arr2[i])
             return false;
     }
     return true;
 }
+// based on the block_index and offsite to compare the middle part of text_fingerprint_array and
+// the middle part of the reversal_pattern_fingerprint_array
 
-// array copy arr1 -> arr2
-void array_copy(unsigned int * arr1, unsigned int * arr2){
-    for(unsigned int i = 0 ; i < number_blocks; ++i){
-        arr2[i] = arr1[i];
+bool reversal_exists(unsigned int * text, unsigned int * reversed_pattern, 
+                     unsigned int first_block_index, unsigned int first_offsite,
+                     unsigned int last_block_index, unsigned int last_offsite){
+    // based on index and offsite to retrieve the part of text_fingerprint_array.
+    unsigned int temp_text_fingerprint_array[last_block_index - first_block_index + 1];
+    retrieve_array(text, temp_text_fingerprint_array, first_block_index, first_offsite, last_block_index, last_offsite, block_length_array);
+
+    unsigned int temp_reversal_pattern_array[last_block_index - first_block_index + 1];
+    unsigned int reversed_first_offsite = block_length_array[last_block_index] - last_offsite - 1;
+    unsigned int reversed_last_offsite = block_length_array[first_block_index] - first_offsite - 1;
+    retrieve_array(reversed_pattern, temp_reversal_pattern_array, number_blocks - last_block_index - 1, 
+                reversed_first_offsite, number_blocks - first_block_index - 1,
+                reversed_last_offsite, reversed_block_length_array);
+    
+    // off site
+    unsigned int different_offsite = 0;
+    unsigned int move_number = 0;
+    int index = 0;
+    unsigned int border_block_leave_base = 0;
+    unsigned int move_base = 0;
+    unsigned int leave_base = 0;
+    unsigned int temp_store = 0;
+    // move reversed pattern array backward
+    if(first_offsite > reversed_first_offsite){
+        different_offsite = first_offsite - reversed_first_offsite;
+        unsigned int temp_store = 0;
+        index = 0;
+        border_block_leave_base = block_length_array[first_block_index] - first_offsite;
+        move_base = pow(base, different_offsite);
+        temp_store = 0;
+        while(index <= last_block_index - first_block_index){
+            if(index == 0){
+                temp_store = temp_reversal_pattern_array[index];
+                move_number = temp_store % move_base;
+                temp_reversal_pattern_array[index] = temp_store / move_base;
+                index ++;
+                continue;
+            }
+            if(index == last_block_index - first_block_index){
+                temp_store = temp_reversal_pattern_array[index];
+                temp_reversal_pattern_array[index] = move_number * move_base  + temp_store;
+                index ++;
+                continue;
+            }
+            temp_store = temp_reversal_pattern_array[index];
+            temp_reversal_pattern_array[index] = temp_store / move_base;
+            temp_reversal_pattern_array[index] += move_number * pow(base, block_length_array[first_block_index] - different_offsite);
+            move_number = temp_store % move_base;
+            index ++ ;
+        }
     }
+    // move reversed pattern array forward
+    else{
+        temp_store = 0;
+        different_offsite = reversed_first_offsite - first_offsite;
+        index = last_block_index - first_block_index;
+        border_block_leave_base = pow(base,reversed_last_offsite + 1 - different_offsite);
+        move_base = pow(base, different_offsite);
+        leave_base = pow(base, block_length_array[first_block_index + 1] - different_offsite);
+        while(index >= 0){
+            if(index == last_block_index - first_block_index){
+                temp_store = temp_reversal_pattern_array[index];
+                // the front part which we want to move it to previous block. 
+                // the length should be equal to different_offsite.
+                move_number = temp_store / border_block_leave_base;
+                temp_reversal_pattern_array[index] = temp_store % border_block_leave_base;
+                index --;
+                continue;
+            }
+            if(index  == 0){
+                temp_reversal_pattern_array[index] = temp_reversal_pattern_array[index] * move_base + move_number;
+                index --;
+                continue;
+            }
+            temp_store = temp_reversal_pattern_array[index];
+            temp_reversal_pattern_array[index] = temp_store % leave_base;
+            temp_reversal_pattern_array[index] = temp_reversal_pattern_array[index] * move_base + move_number;
+            move_number = temp_store / leave_base;
+            index --;       
+        }
+    }
+    
+    return two_arrays_equal(temp_text_fingerprint_array, temp_reversal_pattern_array,last_block_index - first_block_index + 1);    
 }
 
 // slide the window
@@ -243,8 +313,12 @@ unsigned int count_pattern(std::string text, std::string pattern){
     unsigned int pattern_fingerprint_array [number_blocks]; 
     fingerprint_array_computation(pattern, pattern_fingerprint_array);
 
+    //compute the reversal fingerprint array for pattern
+    unsigned int reversal_pattern_fingerprint_array[number_blocks];
+    reverse_array_entry(pattern_fingerprint_array, reversal_pattern_fingerprint_array);
+
     unsigned int text_fingerprint_array [number_blocks];
-    unsigned int reversal_text_fingerprint_array[number_blocks];
+
     // the first and last blocks with the different fingerprint number
     unsigned int first_block_index = 0, last_block_index = 0;
     // first offsite index in first different block.
@@ -257,7 +331,6 @@ unsigned int count_pattern(std::string text, std::string pattern){
     unsigned int index = 0;
     // initial part.
     fingerprint_array_computation(text.substr(index, pattern.size()), text_fingerprint_array);
-    array_copy(text_fingerprint_array, reversal_text_fingerprint_array);
     // loop part.
     while(true){
         identify_different_blocks(first, last, exist_pointer, text_fingerprint_array, pattern_fingerprint_array);
@@ -267,14 +340,12 @@ unsigned int count_pattern(std::string text, std::string pattern){
                             pattern_fingerprint_array[first_block_index], block_length_array[first_block_index]);
             last_offsite = find_last_index(text_fingerprint_array[last_block_index], 
                             pattern_fingerprint_array[last_block_index], block_length_array[last_block_index]);
-        
-            // reversal the letters and update the text_fingerprint_array!
-            reverse_fingerprint_array(reversal_text_fingerprint_array, first_block_index, 
-                                first_offsite, last_block_index, last_offsite);
 
-            // check the reversal_text_fingerprint_array is equal to pattern_fingerprint_array 
-            if(two_arrays_equal(reversal_text_fingerprint_array, pattern_fingerprint_array)){
+            if (reversal_exists(text_fingerprint_array, reversal_pattern_fingerprint_array, 
+                            first_block_index, first_offsite, last_block_index, last_offsite))
+            {
                 count += 1;
+
             }
         }
         else{
@@ -286,7 +357,6 @@ unsigned int count_pattern(std::string text, std::string pattern){
         }
         //slide window
         slide_window(text_fingerprint_array, text.substr(pattern.size() + index - 1, 1));
-        array_copy(text_fingerprint_array,reversal_text_fingerprint_array);
     }
 
     first = NULL, last = NULL, exist_pointer = NULL;
@@ -299,11 +369,19 @@ unsigned int count_pattern(std::string text, std::string pattern){
 int main(){
     std::string text_letter = "ACGTAGCTTGCACAGT";
     std::string pattern_letter = "ACGT";
+    //std::string text_letter = "ACTTGCTAACAAGTGCAC";
+    //std::string pattern_letter = "ACTTGGAACAATCTGCA";
+
+    //std::string text_letter = "ACTTGCTGACAACTGCAC";
+    //std::string pattern_letter = "ACTTGCTTCAACAGGCA";
+
+
 
     std::string text_number = letter_to_number(text_letter);
     std::string pattern_number = letter_to_number(pattern_letter);
     
     unsigned int count = count_pattern(text_number, pattern_number);
     std::cout << count << std::endl;
+
     return 0;
 }
