@@ -52,6 +52,37 @@ void fingerprint_array_computation(std::string factor, unsigned int * fingerprin
             start_index += block_length_array[i];
     }
 }
+unsigned int find_first_index_linear(unsigned int text_fingerprint, unsigned int pattern_fingerprint, unsigned int block_length){
+    int index  = block_length - 1;
+    unsigned int temp_text = 0, temp_pattern = 0;
+
+    while(index >= 0){
+        temp_text = text_fingerprint / (unsigned int) pow(base, index);
+        temp_text = temp_text % base;
+        temp_pattern = pattern_fingerprint / (unsigned int) pow(base, index);
+        temp_pattern = temp_pattern % base;
+        if (temp_text != temp_pattern)
+            return block_length - index - 1;
+        index --;
+    }
+    return 0;
+}
+
+unsigned int find_last_index_linear(unsigned int text_fingerprint, unsigned int pattern_fingerprint, unsigned int block_length){
+    unsigned int temp_text = 0, temp_pattern = 0;
+    int index  = 0;
+    while(index < block_length){
+        temp_text = text_fingerprint / (unsigned int) pow(base, index);
+        temp_text = temp_text % base;
+
+        temp_pattern = pattern_fingerprint / (unsigned int) pow(base, index);
+        temp_pattern = temp_pattern % base;
+        if (temp_text != temp_pattern)
+            return block_length - index - 1;
+        index ++;
+    }
+    return 0;
+}
 
 // find the first different index in a block (binary search)
 unsigned int find_first_index(unsigned int text_fingerprint, unsigned int pattern_fingerprint, unsigned int block_length){
@@ -106,19 +137,23 @@ unsigned int find_last_index(unsigned int text_fingerprint, unsigned int pattern
     return start;
 }
 
-// identify first and last different blocks' index
+// identify first and last different blocks' index (linear search)
 void identify_different_blocks(unsigned int * first, unsigned int * last, bool * exist_difference,
     unsigned int * text_fingerprint_array, unsigned int * pattern_fingerprint_array){
     * exist_difference = false;
     * first = 0;
     * last = 0;
-    for(unsigned int i = 0; i < number_blocks; ++i){
+    for(int i = 0; i < number_blocks; ++i){
         if(text_fingerprint_array[i] != pattern_fingerprint_array[i]){
-            if(! *exist_difference){
-                * first = i;
-            }
-            * last = i;
+            * first = i;
             * exist_difference = true;
+            break;
+        }
+    }
+    for(int i = number_blocks - 1; i >= 0; --i){
+        if(text_fingerprint_array[i] != pattern_fingerprint_array[i]){
+            * last = i;
+            break;
         }
     }
 }
@@ -336,11 +371,11 @@ unsigned int count_pattern(std::string text, std::string pattern){
         identify_different_blocks(first, last, exist_pointer, text_fingerprint_array, pattern_fingerprint_array);
         if(exist_difference){
             // find two corresponding offsite in the blocks.
-            first_offsite = find_first_index(text_fingerprint_array[first_block_index], 
+            first_offsite = find_first_index_linear(text_fingerprint_array[first_block_index], 
                             pattern_fingerprint_array[first_block_index], block_length_array[first_block_index]);
-            last_offsite = find_last_index(text_fingerprint_array[last_block_index], 
+            last_offsite = find_last_index_linear(text_fingerprint_array[last_block_index], 
                             pattern_fingerprint_array[last_block_index], block_length_array[last_block_index]);
-
+            
             if (reversal_exists(text_fingerprint_array, reversal_pattern_fingerprint_array, 
                             first_block_index, first_offsite, last_block_index, last_offsite))
             {
@@ -367,13 +402,13 @@ unsigned int count_pattern(std::string text, std::string pattern){
 
 
 int main(){
-    std::string text_letter = "ACGTAGCTTGCACAGT";
-    std::string pattern_letter = "ACGT";
+    //std::string text_letter = "ACGTAGCTTGCACAGT";
+    //std::string pattern_letter = "ACGT";
     //std::string text_letter = "ACTTGCTAACAAGTGCAC";
     //std::string pattern_letter = "ACTTGGAACAATCTGCA";
 
-    //std::string text_letter = "ACTTGCTGACAACTGCAC";
-    //std::string pattern_letter = "ACTTGCTTCAACAGGCA";
+    std::string text_letter = "ACTTGCTGACAACTGCAC";
+    std::string pattern_letter = "ACTTGCTTCAACAGGCA";
 
 
 
@@ -382,6 +417,8 @@ int main(){
     
     unsigned int count = count_pattern(text_number, pattern_number);
     std::cout << count << std::endl;
+
+    //std::cout << find_first_index_linear(448,449,4) << std::endl;
 
     return 0;
 }
