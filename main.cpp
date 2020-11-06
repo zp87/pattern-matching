@@ -10,7 +10,6 @@ unsigned int * block_length_array;
 
 unsigned int * reversed_block_length_array;
 
-
 // how many pieces of the block divided into.
 unsigned int number_blocks;
 
@@ -44,42 +43,30 @@ unsigned int fingerprint_computation(std::string block){
 }
 
 // compute the fingerprint array for text
-void fingerprint_array_computation(std::string factor, unsigned int * fingerprint_array_pointer){
+void fingerprint_array_computation(std::string factor, unsigned int * fingerprint_array_pointer, std::string * text_array_pointer){
     unsigned int start_index = 0;
-    for(int i = 0; i < number_blocks; ++i){
-        fingerprint_array_pointer[i] = fingerprint_computation(
-            factor.substr(start_index, block_length_array[i]));
-            start_index += block_length_array[i];
+    for(int i = 0 ; i < number_blocks; ++i){
+        text_array_pointer[i] = factor.substr(start_index, block_length_array[i]);
+        fingerprint_array_pointer[i] = fingerprint_computation(text_array_pointer[i]);
+        start_index += block_length_array[i];
+
     }
 }
-unsigned int find_first_index_linear(unsigned int text_fingerprint, unsigned int pattern_fingerprint, unsigned int block_length){
-    int index  = block_length - 1;
-    unsigned int temp_text = 0, temp_pattern = 0;
 
-    while(index >= 0){
-        temp_text = text_fingerprint / (unsigned int) pow(base, index);
-        temp_text = temp_text % base;
-        temp_pattern = pattern_fingerprint / (unsigned int) pow(base, index);
-        temp_pattern = temp_pattern % base;
-        if (temp_text != temp_pattern)
-            return block_length - index - 1;
-        index --;
+unsigned int find_first_index_linear(std::string text_factor, std::string pattern_factor, unsigned int block_length){
+    for(int i = 0; i < block_length; ++i){
+        if(text_factor.substr(i,1) != pattern_factor.substr(i,1)){
+            return i;
+        }
     }
     return 0;
 }
 
-unsigned int find_last_index_linear(unsigned int text_fingerprint, unsigned int pattern_fingerprint, unsigned int block_length){
-    unsigned int temp_text = 0, temp_pattern = 0;
-    int index  = 0;
-    while(index < block_length){
-        temp_text = text_fingerprint / (unsigned int) pow(base, index);
-        temp_text = temp_text % base;
-
-        temp_pattern = pattern_fingerprint / (unsigned int) pow(base, index);
-        temp_pattern = temp_pattern % base;
-        if (temp_text != temp_pattern)
-            return block_length - index - 1;
-        index ++;
+unsigned int find_last_index_linear(std::string text_factor, std::string pattern_factor, unsigned int block_length){
+    for(int i = block_length - 1; i>= 0 ; --i){
+        if(text_factor.substr(i,1) != pattern_factor.substr(i,1)){
+            return i;
+        }
     }
     return 0;
 }
@@ -311,8 +298,7 @@ bool reversal_exists(unsigned int * text, unsigned int * reversed_pattern,
 }
 
 // slide the window
-void slide_window(unsigned int * text_fingerprint_array, std::string last_letter){
-    //std::cout<< last_letter << std::endl;
+void slide_window(unsigned int * text_fingerprint_array, std::string * text_number_array, std::string last_letter){
     unsigned int index = 0;
     unsigned int front = text_fingerprint_array[index]/(unsigned int)(pow(base, block_length_array[index] - 1));
     unsigned int end = 0;
@@ -325,12 +311,15 @@ void slide_window(unsigned int * text_fingerprint_array, std::string last_letter
         
         text_fingerprint_array[index] += end;
         front = end;
-        index ++;
+        text_number_array[index] = text_number_array[index].substr(1, block_length_array[index] - 1) + 
+                                   text_number_array[index + 1].substr(0,1);
+        index++;
     }
     // last block
     text_fingerprint_array[index] -= front * (unsigned int)(pow(base, block_length_array[index] - 1));
     text_fingerprint_array[index] = text_fingerprint_array[index] * base;
     text_fingerprint_array[index] += std::stoi(last_letter);
+    text_number_array[index] = text_number_array[index].substr(1, block_length_array[index] - 1) + last_letter;
 }
 
 
@@ -344,15 +333,18 @@ unsigned int count_pattern(std::string text, std::string pattern){
     // initial and compute the each block's length;
     block_length_array_generation(pattern, block_length);
     
-    // compute fingerprint array for pattern
-    unsigned int pattern_fingerprint_array [number_blocks]; 
-    fingerprint_array_computation(pattern, pattern_fingerprint_array);
+    // compute fingerprint array and pattern_number_array for pattern
+
+    unsigned int pattern_fingerprint_array [number_blocks];
+    std::string pattern_number_array[number_blocks]; 
+    fingerprint_array_computation(pattern, pattern_fingerprint_array, pattern_number_array);
 
     //compute the reversal fingerprint array for pattern
     unsigned int reversal_pattern_fingerprint_array[number_blocks];
     reverse_array_entry(pattern_fingerprint_array, reversal_pattern_fingerprint_array);
 
     unsigned int text_fingerprint_array [number_blocks];
+    std::string text_number_array [number_blocks];
 
     // the first and last blocks with the different fingerprint number
     unsigned int first_block_index = 0, last_block_index = 0;
@@ -365,22 +357,22 @@ unsigned int count_pattern(std::string text, std::string pattern){
     bool * exist_pointer = & exist_difference;
     unsigned int index = 0;
     // initial part.
-    fingerprint_array_computation(text.substr(index, pattern.size()), text_fingerprint_array);
+    fingerprint_array_computation(text.substr(index, pattern.size()), text_fingerprint_array, text_number_array);
     // loop part.
+    
     while(true){
         identify_different_blocks(first, last, exist_pointer, text_fingerprint_array, pattern_fingerprint_array);
         if(exist_difference){
             // find two corresponding offsite in the blocks.
-            first_offsite = find_first_index_linear(text_fingerprint_array[first_block_index], 
-                            pattern_fingerprint_array[first_block_index], block_length_array[first_block_index]);
-            last_offsite = find_last_index_linear(text_fingerprint_array[last_block_index], 
-                            pattern_fingerprint_array[last_block_index], block_length_array[last_block_index]);
+            first_offsite = find_first_index_linear(text_number_array[first_block_index], 
+                            pattern_number_array[first_block_index], block_length_array[first_block_index]);
+            last_offsite = find_last_index_linear(text_number_array[last_block_index], 
+                            pattern_number_array[last_block_index], block_length_array[last_block_index]);
             
             if (reversal_exists(text_fingerprint_array, reversal_pattern_fingerprint_array, 
                             first_block_index, first_offsite, last_block_index, last_offsite))
             {
                 count += 1;
-
             }
         }
         else{
@@ -391,8 +383,10 @@ unsigned int count_pattern(std::string text, std::string pattern){
             break;
         }
         //slide window
-        slide_window(text_fingerprint_array, text.substr(pattern.size() + index - 1, 1));
+        slide_window(text_fingerprint_array, text_number_array, text.substr(pattern.size() + index - 1, 1));
+        break;
     }
+    
 
     first = NULL, last = NULL, exist_pointer = NULL;
 
@@ -402,13 +396,13 @@ unsigned int count_pattern(std::string text, std::string pattern){
 
 
 int main(){
-    //std::string text_letter = "ACGTAGCTTGCACAGT";
-    //std::string pattern_letter = "ACGT";
+    std::string text_letter = "ACGTAGCTTGCACAGT";
+    std::string pattern_letter = "ACGT";
     //std::string text_letter = "ACTTGCTAACAAGTGCAC";
     //std::string pattern_letter = "ACTTGGAACAATCTGCA";
 
-    std::string text_letter = "ACTTGCTGACAACTGCAC";
-    std::string pattern_letter = "ACTTGCTTCAACAGGCA";
+    //std::string text_letter = "ACTTGCTGACAACTGCAC";
+    //std::string pattern_letter = "ACTTGCTTCAACAGGCA";
 
 
 
@@ -420,5 +414,8 @@ int main(){
 
     //std::cout << find_first_index_linear(448,449,4) << std::endl;
 
+    // the max unsigned int is to 13. the block length can be 14
+    // the max unsigned long int is to 20.  the block length can be 21.
+    // the max unsigned long long int is to 27. the block length can be 28.
     return 0;
 }
