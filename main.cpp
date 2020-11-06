@@ -384,7 +384,6 @@ unsigned int count_pattern(std::string text, std::string pattern){
         }
         //slide window
         slide_window(text_fingerprint_array, text_number_array, text.substr(pattern.size() + index - 1, 1));
-        break;
     }
     
 
