@@ -2,7 +2,10 @@
 #include <algorithm>  
 #include <string>
 #include <map>
+#include <fstream>
+#include <cstdlib>
 #include <math.h>
+#include <boost/program_options.hpp>
 
 const unsigned int base = 5;
 
@@ -322,14 +325,21 @@ void slide_window(unsigned int * text_fingerprint_array, std::string * text_numb
     text_number_array[index] = text_number_array[index].substr(1, block_length_array[index] - 1) + last_letter;
 }
 
+std::string convert_array_to_string(std::string* array, int length){
+    std::string result = "";
+    for(int i = 0; i < length; ++i){
+        result += array[i];
+    }
+    return result;
+}
+
 
 unsigned int count_pattern(std::string text, std::string pattern){
     unsigned int block_length = sqrt(pattern.size());
     unsigned int count = 0;
-    
+
     number_blocks = pattern.size()/block_length;
     pattern.size() % block_length > 0 ? number_blocks += 1: NULL;
-
     // initial and compute the each block's length;
     block_length_array_generation(pattern, block_length);
     
@@ -359,7 +369,6 @@ unsigned int count_pattern(std::string text, std::string pattern){
     // initial part.
     fingerprint_array_computation(text.substr(index, pattern.size()), text_fingerprint_array, text_number_array);
     // loop part.
-    
     while(true){
         identify_different_blocks(first, last, exist_pointer, text_fingerprint_array, pattern_fingerprint_array);
         if(exist_difference){
@@ -383,35 +392,97 @@ unsigned int count_pattern(std::string text, std::string pattern){
             break;
         }
         //slide window
+        //std::cout << "text  " << convert_array_to_string() << std::endl;
         slide_window(text_fingerprint_array, text_number_array, text.substr(pattern.size() + index - 1, 1));
     }
-    
-
     first = NULL, last = NULL, exist_pointer = NULL;
 
     return count;
 }
 
+std::string read_file(std::string file_name, unsigned int max_length){
+    std::ifstream file(file_name);
+    std::string str, result;
+    unsigned int current_length = 0; 
+    // avoid header line in the file
+    std::getline(file, str);
+    while(std::getline(file, str)){
+        if(current_length + str.length() > max_length){
+            result += str.substr(0, max_length - current_length);
+            break;
+        }
+        current_length += str.length();
+        result += str;
+    }
+    return result;
+}
 
+void program_options(int argc, char* argv[], int& pattern_length, std::string& text_file_name, int& text_length){
+    namespace po = boost::program_options;
+    po::options_description alldesc("Allowed options");
+    alldesc.add_options()
+                    ("help", "produce help message")
+                    ("pattern_length", po::value<int>(&pattern_length)->default_value(20), "the length of pattern")
+                    ("text_file_name", po::value<std::string>(&text_file_name)->default_value("data/Escherichia_coli_strain_FORC_028.fasta"), "file storing the input sequence")
+                    ("text_length", po::value<int>(&text_length)->default_value(25), "the length of text");
 
-int main(){
-    std::string text_letter = "ACGTAGCTTGCACAGT";
-    std::string pattern_letter = "ACGT";
-    //std::string text_letter = "ACTTGCTAACAAGTGCAC";
-    //std::string pattern_letter = "ACTTGGAACAATCTGCA";
+    po::positional_options_description pos;
+    pos.add("pattern_length", 1);
+    pos.add("text_file_name", 1);
+    pos.add("text_length", 1);
 
-    //std::string text_letter = "ACTTGCTGACAACTGCAC";
-    //std::string pattern_letter = "ACTTGCTTCAACAGGCA";
+    po::options_description all;
+    all.add(alldesc);
 
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc,argv,all),vm);
+    po::notify(vm);
+    if (vm.count("help")) {
+        std::cout << alldesc << "\n";
+    }
 
+    if (vm.count("pattern_length")) {
+        std::cout << "pattern_length was set to " 
+        << vm["pattern_length"].as<int>() << ".\n";
+    } else {
+        std::cout << "pattern_length was not set.\n";
+    }
+
+    if (vm.count("text_file_name")) {
+        std::cout << "text_file_name was set to " 
+        << vm["text_file_name"].as<std::string >() << ".\n";
+    } else {
+        std::cout << "text_file_name was not set.\n";
+    }
+
+    if (vm.count("text_length")) {
+        std::cout << "text_length was set to " 
+        << vm["text_length"].as<int>() << ".\n";
+    } else {
+        std::cout << "pattern_length was not set.\n";
+    }
+}
+
+int main(int argc, char** argv){
+    int pattern_length;
+    std::string text_file_name;
+    int text_length;
+    program_options(argc, argv, pattern_length, text_file_name, text_length);
+
+    std::string text_letter = read_file(text_file_name, text_length);
+    std::string pattern_letter = read_file(text_file_name, pattern_length);
 
     std::string text_number = letter_to_number(text_letter);
     std::string pattern_number = letter_to_number(pattern_letter);
-    
-    unsigned int count = count_pattern(text_number, pattern_number);
-    std::cout << count << std::endl;
 
-    //std::cout << find_first_index_linear(448,449,4) << std::endl;
+    time_t start, end;
+    time(&start);
+    unsigned int count = count_pattern(text_number, pattern_number);
+    time(&end);
+
+    std::cout << "final count:   " <<count << std::endl;
+    double time_taken = double(end-start);
+    std::cout << "second:  " << time_taken << std::endl;
 
     // the max unsigned int is to 13. the block length can be 14
     // the max unsigned long int is to 20.  the block length can be 21.

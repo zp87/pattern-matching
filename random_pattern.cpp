@@ -3,6 +3,8 @@
 #include <map>
 #include <fstream>
 #include <vector>
+#include <boost/program_options.hpp>
+
 
 unsigned int prime_base = 0;
 
@@ -437,6 +439,52 @@ unsigned int count_pattern(std::string text, std::string pattern){
     return count;
 }
 
+void program_options(int argc, char* argv[], int& pattern_length, std::string& text_file_name, int& text_length){
+    namespace po = boost::program_options;
+    po::options_description alldesc("Allowed options");
+    alldesc.add_options()
+                    ("help", "produce help message")
+                    ("pattern_length", po::value<int>(&pattern_length)->default_value(20), "the length of pattern")
+                    ("text_file_name", po::value<std::string>(&text_file_name)->default_value("data/Escherichia_coli_strain_FORC_028.fasta"), "file storing the input sequence")
+                    ("text_length", po::value<int>(&text_length)->default_value(25), "the length of text");
+
+    po::positional_options_description pos;
+    pos.add("pattern_length", 1);
+    pos.add("text_file_name", 1);
+    pos.add("text_length", 1);
+
+    po::options_description all;
+    all.add(alldesc);
+
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc,argv,all),vm);
+    po::notify(vm);
+    if (vm.count("help")) {
+        std::cout << alldesc << "\n";
+    }
+
+    if (vm.count("pattern_length")) {
+        std::cout << "pattern_length was set to " 
+        << vm["pattern_length"].as<int>() << ".\n";
+    } else {
+        std::cout << "pattern_length was not set.\n";
+    }
+
+    if (vm.count("text_file_name")) {
+        std::cout << "text_file_name was set to " 
+        << vm["text_file_name"].as<std::string >() << ".\n";
+    } else {
+        std::cout << "text_file_name was not set.\n";
+    }
+
+    if (vm.count("text_length")) {
+        std::cout << "text_length was set to " 
+        << vm["text_length"].as<int>() << ".\n";
+    } else {
+        std::cout << "pattern_length was not set.\n";
+    }
+
+}
 
 std::string read_file(std::string file_name, unsigned int max_length){
     std::ifstream file(file_name);
@@ -457,24 +505,28 @@ std::string read_file(std::string file_name, unsigned int max_length){
 
 
 int main(int argc, char** argv){
-    std::string text_letter = "ACGTAGCTTGCACAGT";
-    std::string pattern_letter = "ACGT";
+    int pattern_length;
+    std::string text_file_name;
+    int text_length;
+    program_options(argc, argv, pattern_length, text_file_name, text_length);
+
+    std::string text_letter = read_file(text_file_name, text_length);
+    std::string pattern_letter = read_file(text_file_name, pattern_length);
 
     std::string text_number = letter_to_number(text_letter);
     std::string pattern_number = letter_to_number(pattern_letter);
-    
-    std::string file_name = "data/Escherichia_coli_strain_FORC_028.fasta";
-    std::string input_string = read_file(file_name, 400);
-    //std::cout << input_string.length() << std::endl;
 
     // randomly generate the prime number based on the input.
     prime_base_generation(1000);
 
-
-
+    time_t start, end;
+    time(&start);
     unsigned int count = count_pattern(text_number, pattern_number);
-    std::cout << count << std::endl;
+    time(&end);
 
+    std::cout << "final count:   " <<count << std::endl;
+    double time_taken = double(end-start);
+    std::cout << "second:  " << time_taken << std::endl;
 
     return 0;
 }
