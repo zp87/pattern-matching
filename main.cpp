@@ -16,6 +16,8 @@ unsigned int * reversed_block_length_array;
 // how many pieces of the block divided into.
 unsigned int number_blocks;
 
+bool debug_mode = false;
+
 
 std::map<std::string, std::string> create_letterMap(){
     std::map<std::string, std::string> letterMap;
@@ -328,7 +330,7 @@ void slide_window(unsigned int * text_fingerprint_array, std::string * text_numb
 std::string convert_array_to_string(std::string* array, int length){
     std::string result = "";
     for(int i = 0; i < length; ++i){
-        result += array[i];
+        result += array[i] + "  ";
     }
     return result;
 }
@@ -392,7 +394,15 @@ unsigned int count_pattern(std::string text, std::string pattern){
             break;
         }
         //slide window
-        //std::cout << "text  " << convert_array_to_string() << std::endl;
+        if(debug_mode){
+            std::cout << "index:      " << index << std::endl;
+            std::cout << "count:      " << count << std::endl;
+            std::cout << first_block_index << "   " << first_offsite << "   " << last_block_index << "   " << last_offsite << std::endl;
+            std::cout << "pattern:    " << convert_array_to_string(pattern_number_array, number_blocks) << std::endl;
+            std::cout << "text:       " << convert_array_to_string(text_number_array, number_blocks) << std::endl;
+            std::cout << "------------------------------" << std::endl;
+        }
+        
         slide_window(text_fingerprint_array, text_number_array, text.substr(pattern.size() + index - 1, 1));
     }
     first = NULL, last = NULL, exist_pointer = NULL;
@@ -417,19 +427,21 @@ std::string read_file(std::string file_name, unsigned int max_length){
     return result;
 }
 
-void program_options(int argc, char* argv[], int& pattern_length, std::string& text_file_name, int& text_length){
+void program_options(int argc, char* argv[], int& pattern_length, std::string& text_file_name, int& text_length, bool& debug_mode){
     namespace po = boost::program_options;
     po::options_description alldesc("Allowed options");
     alldesc.add_options()
                     ("help", "produce help message")
                     ("pattern_length", po::value<int>(&pattern_length)->default_value(20), "the length of pattern")
                     ("text_file_name", po::value<std::string>(&text_file_name)->default_value("data/Escherichia_coli_strain_FORC_028.fasta"), "file storing the input sequence")
-                    ("text_length", po::value<int>(&text_length)->default_value(25), "the length of text");
+                    ("text_length", po::value<int>(&text_length)->default_value(25), "the length of text")
+                    ("debug_mode", po::value<bool>(&debug_mode)->default_value(false), "print all factors");
 
     po::positional_options_description pos;
     pos.add("pattern_length", 1);
     pos.add("text_file_name", 1);
     pos.add("text_length", 1);
+    pos.add("debug_mode", 1);
 
     po::options_description all;
     all.add(alldesc);
@@ -461,13 +473,20 @@ void program_options(int argc, char* argv[], int& pattern_length, std::string& t
     } else {
         std::cout << "pattern_length was not set.\n";
     }
+
+    if (vm.count("debug_mode")) {
+        std::cout << "debug mode was set to " 
+        << vm["debug_mode"].as<bool>() << ".\n";
+    } else {
+        std::cout << "pattern_length was not set.\n";
+    }
 }
 
 int main(int argc, char** argv){
     int pattern_length;
     std::string text_file_name;
     int text_length;
-    program_options(argc, argv, pattern_length, text_file_name, text_length);
+    program_options(argc, argv, pattern_length, text_file_name, text_length, debug_mode);
 
     std::string text_letter = read_file(text_file_name, text_length);
     std::string pattern_letter = read_file(text_file_name, pattern_length);
