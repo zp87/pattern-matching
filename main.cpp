@@ -478,7 +478,7 @@ void program_options(int argc, char* argv[], int& pattern_length, std::string& t
         std::cout << "debug mode was set to " 
         << vm["debug_mode"].as<bool>() << ".\n";
     } else {
-        std::cout << "pattern_length was not set.\n";
+        std::cout << "debug_mode was not set.\n";
     }
 }
 
