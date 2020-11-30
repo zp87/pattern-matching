@@ -65,10 +65,18 @@ bool is_prime(int n)
 
 void prime_base_generation(unsigned int n){
     std::vector<unsigned int> prime_vector;
-    for (int i = 2; i <= n; i++){
-        if(is_prime(i))
+    int i = 2;
+    while(prime_vector.size() < n){
+        if(is_prime(i)){
             prime_vector.push_back(i);
+        }
+        i++;
     }
+    //for (int i = 2; i <= n; i++){
+    //    if(is_prime(i))
+    //        prime_vector.push_back(i);
+    //    std::cout << prime_vector.size() << std::endl;
+    //}
     srand ( time(0) );
     prime_base = prime_vector.at(rand() % prime_vector.size());
 }
@@ -550,7 +558,6 @@ int main(int argc, char** argv){
     std::string text_number = letter_to_number(text_letter);
     std::string pattern_number = letter_to_number(pattern_letter);
     
-
     // randomly generate the prime number based on the input.
     prime_base_generation(pattern_number.length() * 2);
     std::cout << "prime base: " << prime_base << std::endl;
