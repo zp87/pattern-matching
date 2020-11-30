@@ -189,22 +189,27 @@ void reverse_array_entry(unsigned int * original, unsigned int * reversed){
 void retrieve_array(unsigned int * text, unsigned int * result, unsigned int first_block_index, unsigned int first_offsite,
                     unsigned int last_block_index, unsigned int last_offsite, unsigned int * length_array){
     unsigned int index = 0;
-    while(index <= last_block_index - first_block_index){
-        if(index == 0){
-            result[index] =text[first_block_index + index]%(unsigned int)(pow(base, length_array[first_block_index + index] - first_offsite));
-            index ++;
-            continue;
-        }
-        if(index == last_block_index - first_block_index){
-
-            result[index] =text[first_block_index + index]/(unsigned int)(pow(base, length_array[first_block_index + index] - last_offsite - 1));
-            index ++;
-            continue;
-        }
-        result[index] = text[first_block_index + index];
-        index ++ ;
+    if(last_block_index == first_block_index){
+        unsigned int remainder = text[last_block_index] % (unsigned int)pow(base, length_array[last_block_index] - first_offsite);
+        result[0] = remainder / (unsigned int)pow(base, length_array[last_block_index] - last_offsite - 1);
     }
+    else{
+        while(index <= last_block_index - first_block_index){
+            if(index == 0){
+                result[index] =text[first_block_index + index]%(unsigned int)(pow(base, length_array[first_block_index + index] - first_offsite));
+                index ++;
+                continue;
+            }
+            if(index == last_block_index - first_block_index){
 
+                result[index] =text[first_block_index + index]/(unsigned int)(pow(base, length_array[first_block_index + index] - last_offsite - 1));
+                index ++;
+                continue;
+            }
+            result[index] = text[first_block_index + index];
+            index ++ ;
+        }
+    }
 }
 
 bool two_arrays_equal(unsigned int * arr1, unsigned int * arr2, unsigned int length){
@@ -298,7 +303,8 @@ bool reversal_exists(unsigned int * text, unsigned int * reversed_pattern,
             index --;       
         }
     }
-    
+    std::cout << temp_text_fingerprint_array[0] <<std::endl;
+    std::cout << temp_reversal_pattern_array[0] <<std::endl;
     return two_arrays_equal(temp_text_fingerprint_array, temp_reversal_pattern_array,last_block_index - first_block_index + 1);    
 }
 
