@@ -4,6 +4,7 @@
 #include <fstream>
 #include <vector>
 #include <boost/program_options.hpp>
+#include <time.h>
 
 
 unsigned int prime_base = 0;
@@ -25,6 +26,8 @@ std::string * reversal_pattern_number_array;
 
 unsigned int * text_fingerprint_array;
 std::string * text_number_array;
+
+bool debug_mode = false;
 
 std::map<std::string, std::string> create_letterMap(){
     std::map<std::string, std::string> letterMap;
@@ -66,7 +69,7 @@ void prime_base_generation(unsigned int n){
         if(is_prime(i))
             prime_vector.push_back(i);
     }
-    srand ( time(NULL) );
+    srand ( time(0) );
     prime_base = prime_vector.at(rand() % prime_vector.size());
 }
 
@@ -194,23 +197,28 @@ void retrieve_array(unsigned int * fingerprint_array, std::string * number_array
                     unsigned int first_block_index, unsigned int first_offsite,
                     unsigned int last_block_index, unsigned int last_offsite, unsigned int * length_array){
     unsigned int index = 0;
-
-    while(index <= last_block_index - first_block_index){
-        if(index == 0){
-            number_result[index] = number_array[first_block_index + index].substr(first_offsite, length_array[first_block_index + index] - first_offsite);
-            fingerprint_result[index] = fingerprint_computation(number_result[index]);
+    if (last_block_index - first_block_index == 0){
+        number_result[0] = number_array[first_block_index].substr(first_offsite, last_offsite - first_offsite + 1);
+        fingerprint_result[0] = fingerprint_computation(number_result[0]);
+    }
+    else{
+        while(index <= last_block_index - first_block_index){
+            if(index == 0){
+                number_result[index] = number_array[first_block_index + index].substr(first_offsite, length_array[first_block_index + index] - first_offsite);
+                fingerprint_result[index] = fingerprint_computation(number_result[index]);
+                index ++;
+                continue;
+            }
+            if(index == last_block_index - first_block_index){
+                number_result[index] = number_array[first_block_index + index].substr(0, last_offsite + 1);
+                fingerprint_result[index] = fingerprint_computation(number_result[index]);
+                index ++;
+                continue;
+            }
+            number_result[index] = number_array[first_block_index + index];
+            fingerprint_result[index] = fingerprint_array[first_block_index + index];
             index ++;
-            continue;
         }
-        if(index == last_block_index - first_block_index){
-            number_result[index] = number_array[first_block_index + index].substr(0, last_offsite + 1);
-            fingerprint_result[index] = fingerprint_computation(number_result[index]);
-            index ++;
-            continue;
-        }
-        number_result[index] = number_array[first_block_index + index];
-        fingerprint_result[index] = fingerprint_array[first_block_index + index];
-        index ++;
     }
 }
 
@@ -223,7 +231,6 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
     retrieve_array(text_fingerprint_array, text_number_array, temp_text_fingerprint_array, temp_text_number_array, 
                     first_block_index, first_offsite, last_block_index, last_offsite, block_length_array);
     
-    
 
     unsigned int temp_reversal_pattern_fingerprint_array[last_block_index - first_block_index + 1];
     std::string temp_reversal_pattern_number_array[last_block_index - first_block_index + 1];
@@ -233,105 +240,105 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
                     temp_reversal_pattern_number_array, number_blocks - last_block_index - 1, reversed_first_offsite,
                     number_blocks - first_block_index - 1, reversed_last_offsite, reversed_block_length_array);
 
-    // off site
-    unsigned int different_offsite = 0;
-    int index = 0;
-    unsigned int temp_fingerprint_store = 0;
-    std::string temp_number_store;
-    unsigned int move_fingerprint = 0;
-    std::string move_number;
+    if(first_block_index != last_block_index)  {
+        // off site
+        unsigned int different_offsite = 0;
+        int index = 0;
+        unsigned int temp_fingerprint_store = 0;
+        std::string temp_number_store;
+        unsigned int move_fingerprint = 0;
+        std::string move_number;
 
+        //move temp text array forward
+        if(first_offsite > reversed_first_offsite){
+            temp_fingerprint_store = 0;
+            temp_number_store = "";
+            move_fingerprint = 0;
+            temp_number_store = "";
+            different_offsite = first_offsite - reversed_first_offsite;
+            index = last_block_index - first_block_index;
 
-    //move temp text array forward
-    if(first_offsite > reversed_first_offsite){
-        temp_fingerprint_store = 0;
-        temp_number_store = "";
-        move_fingerprint = 0;
-        temp_number_store = "";
-        different_offsite = first_offsite - reversed_first_offsite;
-        index = last_block_index - first_block_index;
-
-        while(index >= 0){
-            if(index == last_block_index - first_block_index){
-                move_number = temp_text_number_array[index].substr(0, different_offsite);
-                move_fingerprint = fingerprint_computation(move_number);
+            while(index >= 0){
+                if(index == last_block_index - first_block_index){
+                    move_number = temp_text_number_array[index].substr(0, different_offsite);
+                    move_fingerprint = fingerprint_computation(move_number);
                 
-                temp_text_number_array[index] = temp_text_number_array[index].substr(different_offsite, temp_text_number_array[index].length() - different_offsite);
+                    temp_text_number_array[index] = temp_text_number_array[index].substr(different_offsite, temp_text_number_array[index].length() - different_offsite);
                 
-                temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] + prime_base - move_fingerprint * pow_mod(base, last_offsite + 1 - different_offsite);
-                temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
+                    temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] + prime_base - move_fingerprint * pow_mod(base, last_offsite + 1 - different_offsite);
+                    temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
 
-                index -- ;
-                continue;
-            }
-            if(index == 0){
-                temp_text_number_array[index] = temp_text_number_array[index] + move_number;
+                    index -- ;
+                    continue;
+                }
+                if(index == 0){
+                    temp_text_number_array[index] = temp_text_number_array[index] + move_number;
 
-                temp_text_fingerprint_array[index] = (temp_text_fingerprint_array[index] * pow_mod(base, different_offsite)) % prime_base + move_fingerprint;
-                temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
+                    temp_text_fingerprint_array[index] = (temp_text_fingerprint_array[index] * pow_mod(base, different_offsite)) % prime_base + move_fingerprint;
+                    temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
 
-                index --;
-                continue;
-            }
-            temp_number_store = temp_text_number_array[index];
-            temp_fingerprint_store = temp_text_fingerprint_array[index];
+                    index --;
+                    continue;
+                }
+                temp_number_store = temp_text_number_array[index];
+                temp_fingerprint_store = temp_text_fingerprint_array[index];
 
-            temp_text_number_array[index] = temp_number_store.substr(different_offsite, temp_number_store.length() - different_offsite) + move_number;
+                temp_text_number_array[index] = temp_number_store.substr(different_offsite, temp_number_store.length() - different_offsite) + move_number;
             
-            temp_text_fingerprint_array[index] = (temp_fingerprint_store + prime_base) - (fingerprint_computation(temp_number_store.substr(0, different_offsite)) * pow_mod(base, block_length_array[index + first_block_index] - different_offsite)) % prime_base;
-            temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] * pow_mod(base, different_offsite) + move_fingerprint;
-            temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
+                temp_text_fingerprint_array[index] = (temp_fingerprint_store + prime_base) - (fingerprint_computation(temp_number_store.substr(0, different_offsite)) * pow_mod(base, block_length_array[index + first_block_index] - different_offsite)) % prime_base;
+                temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] * pow_mod(base, different_offsite) + move_fingerprint;
+                temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
 
-            move_number = temp_number_store.substr(0, different_offsite);
-            move_fingerprint = fingerprint_computation(move_number);
-            index --;
+                move_number = temp_number_store.substr(0, different_offsite);
+                move_fingerprint = fingerprint_computation(move_number);
+                index --;
+            }
         }
-    }
 
-    //move temp reversed pattern array forward
-    else{
-        temp_fingerprint_store = 0;
-        temp_number_store = "";
-        move_fingerprint = 0;
-        temp_number_store = "";
-        different_offsite = reversed_first_offsite - first_offsite;
-        index = last_block_index - first_block_index;
+        //move temp reversed pattern array forward
+        else{
+            temp_fingerprint_store = 0;
+            temp_number_store = "";
+            move_fingerprint = 0;
+            temp_number_store = "";
+            different_offsite = reversed_first_offsite - first_offsite;
+            index = last_block_index - first_block_index;
 
-        while(index >= 0){
-            if(index == last_block_index - first_block_index){
-                move_number = temp_reversal_pattern_number_array[index].substr(0, different_offsite);
-                move_fingerprint = fingerprint_computation(move_number);
-                
-                temp_reversal_pattern_number_array[index] = temp_reversal_pattern_number_array[index].substr(different_offsite, temp_reversal_pattern_number_array[index].length() - different_offsite);
-                
-                temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] + prime_base - move_fingerprint * pow_mod(base, reversed_last_offsite + 1 - different_offsite);
-                temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
+            while(index >= 0){
+                if(index == last_block_index - first_block_index){
+                    move_number = temp_reversal_pattern_number_array[index].substr(0, different_offsite);
+                    move_fingerprint = fingerprint_computation(move_number);
 
-                index -- ;
-                continue;
-            }
-            if(index == 0){
-                temp_reversal_pattern_number_array[index] = temp_reversal_pattern_number_array[index] + move_number;
+                    temp_reversal_pattern_number_array[index] = temp_reversal_pattern_number_array[index].substr(different_offsite, temp_reversal_pattern_number_array[index].length() - different_offsite);
 
-                temp_reversal_pattern_fingerprint_array[index] = (temp_reversal_pattern_fingerprint_array[index] * pow_mod(base, different_offsite)) % prime_base + move_fingerprint;
-                temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
+                    temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] + prime_base - move_fingerprint * pow_mod(base, reversed_last_offsite + 1 - different_offsite);
+                    temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
 
-                index --;
-                continue;
+                    index -- ;
+                    continue;
+                }
+                if(index == 0){
+                    temp_reversal_pattern_number_array[index] = temp_reversal_pattern_number_array[index] + move_number;
 
-            }
-            temp_number_store = temp_reversal_pattern_number_array[index];
-            temp_fingerprint_store = temp_reversal_pattern_fingerprint_array[index];
+                    temp_reversal_pattern_fingerprint_array[index] = (temp_reversal_pattern_fingerprint_array[index] * pow_mod(base, different_offsite)) % prime_base + move_fingerprint;
+                    temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
 
-            temp_reversal_pattern_number_array[index] = temp_number_store.substr(different_offsite, temp_number_store.length() - different_offsite) + move_number;
+                    index --;
+                    continue;
+                }
+                temp_number_store = temp_reversal_pattern_number_array[index];
+                temp_fingerprint_store = temp_reversal_pattern_fingerprint_array[index];
+
+                temp_reversal_pattern_number_array[index] = temp_number_store.substr(different_offsite, temp_number_store.length() - different_offsite) + move_number;
             
-            temp_reversal_pattern_fingerprint_array[index] = (temp_fingerprint_store + prime_base) - (fingerprint_computation(temp_number_store.substr(0, different_offsite)) * pow_mod(base, reversed_block_length_array[index + first_block_index] - different_offsite)) % prime_base;
-            temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] * pow_mod(base, different_offsite) + move_fingerprint;
-            temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
+                temp_reversal_pattern_fingerprint_array[index] = (temp_fingerprint_store + prime_base) - (fingerprint_computation(temp_number_store.substr(0, different_offsite)) * pow_mod(base, reversed_block_length_array[index + first_block_index] - different_offsite)) % prime_base;
+                temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] * pow_mod(base, different_offsite) + move_fingerprint;
+                temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
 
-            move_number = temp_number_store.substr(0, different_offsite);
-            move_fingerprint = fingerprint_computation(move_number);
-            index --;
+                move_number = temp_number_store.substr(0, different_offsite);
+                move_fingerprint = fingerprint_computation(move_number);
+                index --;
+            }
         }
     }
 
@@ -373,6 +380,14 @@ void slide_window(std::string last_letter){
     text_fingerprint_array[index] = (text_fingerprint_array[index] * base + std::stoi(last_letter)) % prime_base;
 }
 
+std::string convert_array_to_string(std::string* array, int length){
+    std::string result = "";
+    for(int i = 0; i < length; ++i){
+        result += array[i] + "  ";
+    }
+    return result;
+}
+
 unsigned int count_pattern(std::string text, std::string pattern){
     unsigned int block_length = sqrt(pattern.size());
     unsigned int count = 0;
@@ -409,14 +424,18 @@ unsigned int count_pattern(std::string text, std::string pattern){
     // initial part.
     fingerprint_array_computation(text.substr(index, pattern.size()), text_fingerprint_array, text_number_array);
     // loop part.
+
     while(true){
         identify_different_blocks(first, last, exist_pointer);
+
         if(exist_difference){
             // find two corresponding offsite in the blocks.
             first_offsite = find_first_index_linear(text_number_array[first_block_index], 
                             pattern_number_array[first_block_index], block_length_array[first_block_index]);
+
             last_offsite = find_last_index_linear(text_number_array[last_block_index], 
                             pattern_number_array[last_block_index], block_length_array[last_block_index]);
+
             if (reversal_exists(first_block_index, first_offsite, last_block_index, last_offsite))
             {
                 count += 1;
@@ -430,6 +449,14 @@ unsigned int count_pattern(std::string text, std::string pattern){
         if(index >= text.size() - pattern.size() + 1){
             break;
         }
+        if(debug_mode){
+            std::cout << "index:      " << index << std::endl;
+            std::cout << "count:      " << count << std::endl;
+            std::cout << first_block_index << "   " << first_offsite << "   " << last_block_index << "   " << last_offsite << std::endl;
+            std::cout << "pattern:    " << convert_array_to_string(pattern_number_array, number_blocks) << std::endl;
+            std::cout << "text:       " << convert_array_to_string(text_number_array, number_blocks) << std::endl;
+            std::cout << "------------------------------" << std::endl;
+        }
         //slide window
         slide_window(text.substr(pattern.size() + index - 1, 1));
     }
@@ -439,19 +466,21 @@ unsigned int count_pattern(std::string text, std::string pattern){
     return count;
 }
 
-void program_options(int argc, char* argv[], int& pattern_length, std::string& text_file_name, int& text_length){
+void program_options(int argc, char* argv[], int& pattern_length, std::string& text_file_name, int& text_length, bool& debug_mode){
     namespace po = boost::program_options;
     po::options_description alldesc("Allowed options");
     alldesc.add_options()
                     ("help", "produce help message")
-                    ("pattern_length", po::value<int>(&pattern_length)->default_value(20), "the length of pattern")
+                    ("pattern_length", po::value<int>(&pattern_length)->default_value(9), "the length of pattern")
                     ("text_file_name", po::value<std::string>(&text_file_name)->default_value("data/Escherichia_coli_strain_FORC_028.fasta"), "file storing the input sequence")
-                    ("text_length", po::value<int>(&text_length)->default_value(25), "the length of text");
+                    ("text_length", po::value<int>(&text_length)->default_value(25), "the length of text")
+                    ("debug_mode", po::value<bool>(&debug_mode)->default_value(false), "print all factors");
 
     po::positional_options_description pos;
     pos.add("pattern_length", 1);
     pos.add("text_file_name", 1);
     pos.add("text_length", 1);
+    pos.add("debug_mode", 1);
 
     po::options_description all;
     all.add(alldesc);
@@ -484,6 +513,12 @@ void program_options(int argc, char* argv[], int& pattern_length, std::string& t
         std::cout << "pattern_length was not set.\n";
     }
 
+    if (vm.count("debug_mode")) {
+        std::cout << "debug mode was set to " 
+        << vm["debug_mode"].as<bool>() << ".\n";
+    } else {
+        std::cout << "debug_mode was not set.\n";
+    }
 }
 
 std::string read_file(std::string file_name, unsigned int max_length){
@@ -503,21 +538,22 @@ std::string read_file(std::string file_name, unsigned int max_length){
     return result;
 }
 
-
 int main(int argc, char** argv){
     int pattern_length;
     std::string text_file_name;
     int text_length;
-    program_options(argc, argv, pattern_length, text_file_name, text_length);
+    program_options(argc, argv, pattern_length, text_file_name, text_length, debug_mode);
 
     std::string text_letter = read_file(text_file_name, text_length);
     std::string pattern_letter = read_file(text_file_name, pattern_length);
 
     std::string text_number = letter_to_number(text_letter);
     std::string pattern_number = letter_to_number(pattern_letter);
+    
 
     // randomly generate the prime number based on the input.
-    prime_base_generation(1000);
+    prime_base_generation(pattern_number.length() * 2);
+    std::cout << "prime base: " << prime_base << std::endl;
 
     time_t start, end;
     time(&start);
