@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <math.h>
 #include <boost/program_options.hpp>
+#include <time.h>
 
 const unsigned int base = 5;
 
@@ -303,8 +304,6 @@ bool reversal_exists(unsigned int * text, unsigned int * reversed_pattern,
             index --;       
         }
     }
-    std::cout << temp_text_fingerprint_array[0] <<std::endl;
-    std::cout << temp_reversal_pattern_array[0] <<std::endl;
     return two_arrays_equal(temp_text_fingerprint_array, temp_reversal_pattern_array,last_block_index - first_block_index + 1);    
 }
 
@@ -500,14 +499,14 @@ int main(int argc, char** argv){
     std::string text_number = letter_to_number(text_letter);
     std::string pattern_number = letter_to_number(pattern_letter);
 
-    time_t start, end;
-    time(&start);
+    clock_t start, end;
+    start = clock();
     unsigned int count = count_pattern(text_number, pattern_number);
-    time(&end);
+    end = clock();
 
     std::cout << "final count:   " <<count << std::endl;
-    double time_taken = double(end-start);
-    std::cout << "second:  " << time_taken << std::endl;
+    float time_taken = end - start;
+    std::cout << "milliseconds:  " << time_taken << std::endl;
 
     // the max unsigned int is to 13. the block length can be 14
     // the max unsigned long int is to 20.  the block length can be 21.

@@ -562,14 +562,14 @@ int main(int argc, char** argv){
     prime_base_generation(pattern_number.length() * 2);
     std::cout << "prime base: " << prime_base << std::endl;
 
-    time_t start, end;
-    time(&start);
+    clock_t start, end;
+    start = clock();
     unsigned int count = count_pattern(text_number, pattern_number);
-    time(&end);
+    end = clock();
 
     std::cout << "final count:   " <<count << std::endl;
-    double time_taken = double(end-start);
-    std::cout << "second:  " << time_taken << std::endl;
+    float time_taken = end - start;
+    std::cout << "milliseconds:  " << time_taken << std::endl;
 
     return 0;
 }
