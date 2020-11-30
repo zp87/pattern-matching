@@ -270,10 +270,10 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
                 if(index == last_block_index - first_block_index){
                     move_number = temp_text_number_array[index].substr(0, different_offsite);
                     move_fingerprint = fingerprint_computation(move_number);
-                
+
                     temp_text_number_array[index] = temp_text_number_array[index].substr(different_offsite, temp_text_number_array[index].length() - different_offsite);
-                
-                    temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] + prime_base - move_fingerprint * pow_mod(base, last_offsite + 1 - different_offsite);
+
+                    temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] + prime_base - (move_fingerprint * pow_mod(base, last_offsite + 1 - different_offsite)) % prime_base;
                     temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
 
                     index -- ;
@@ -319,7 +319,7 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
 
                     temp_reversal_pattern_number_array[index] = temp_reversal_pattern_number_array[index].substr(different_offsite, temp_reversal_pattern_number_array[index].length() - different_offsite);
 
-                    temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] + prime_base - move_fingerprint * pow_mod(base, reversed_last_offsite + 1 - different_offsite);
+                    temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] + prime_base - (move_fingerprint * pow_mod(base, reversed_last_offsite + 1 - different_offsite)) % prime_base;
                     temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
 
                     index -- ;
@@ -557,7 +557,7 @@ int main(int argc, char** argv){
 
     std::string text_number = letter_to_number(text_letter);
     std::string pattern_number = letter_to_number(pattern_letter);
-    
+
     // randomly generate the prime number based on the input.
     prime_base_generation(pattern_number.length() * 2);
     std::cout << "prime base: " << prime_base << std::endl;
@@ -569,7 +569,9 @@ int main(int argc, char** argv){
 
     std::cout << "final count:   " <<count << std::endl;
     float time_taken = end - start;
-    std::cout << "milliseconds:  " << time_taken << std::endl;
+    std::cout << std::setprecision(9) << "milliseconds:  " << time_taken << std::endl;
+    std::cout << std::setprecision(9) << "seconds:  " << time_taken / CLOCKS_PER_SEC << std::endl;
+
 
     return 0;
 }

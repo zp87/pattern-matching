@@ -236,8 +236,11 @@ bool reversal_exists(unsigned int * text, unsigned int * reversed_pattern,
     retrieve_array(reversed_pattern, temp_reversal_pattern_array, number_blocks - last_block_index - 1, 
                 reversed_first_offsite, number_blocks - first_block_index - 1,
                 reversed_last_offsite, reversed_block_length_array);
-    
-    // off site
+
+    if(first_block_index == last_block_index){
+        return two_arrays_equal(temp_text_fingerprint_array, temp_reversal_pattern_array,last_block_index - first_block_index + 1);    
+    }
+    // off 
     unsigned int different_offsite = 0;
     unsigned int move_number = 0;
     int index = 0;
@@ -245,33 +248,33 @@ bool reversal_exists(unsigned int * text, unsigned int * reversed_pattern,
     unsigned int move_base = 0;
     unsigned int leave_base = 0;
     unsigned int temp_store = 0;
-    // move reversed pattern array backward
+    // move text array forward
     if(first_offsite > reversed_first_offsite){
-        different_offsite = first_offsite - reversed_first_offsite;
-        unsigned int temp_store = 0;
-        index = 0;
-        border_block_leave_base = block_length_array[first_block_index] - first_offsite;
-        move_base = pow(base, different_offsite);
         temp_store = 0;
-        while(index <= last_block_index - first_block_index){
-            if(index == 0){
-                temp_store = temp_reversal_pattern_array[index];
-                move_number = temp_store % move_base;
-                temp_reversal_pattern_array[index] = temp_store / move_base;
-                index ++;
-                continue;
-            }
+        different_offsite = first_offsite - reversed_first_offsite;
+        index = last_block_index - first_block_index;
+        border_block_leave_base = pow(base, last_offsite + 1 - different_offsite);
+        move_base = pow(base, different_offsite);
+        leave_base = pow(base, block_length_array[first_block_index + 1] - different_offsite);
+
+        while(index >= 0 ){
             if(index == last_block_index - first_block_index){
-                temp_store = temp_reversal_pattern_array[index];
-                temp_reversal_pattern_array[index] = move_number * move_base  + temp_store;
-                index ++;
+                temp_store = temp_text_fingerprint_array[index];
+                move_number = temp_store / border_block_leave_base;
+                temp_text_fingerprint_array[index] = temp_store % border_block_leave_base;
+                index --;
                 continue;
             }
-            temp_store = temp_reversal_pattern_array[index];
-            temp_reversal_pattern_array[index] = temp_store / move_base;
-            temp_reversal_pattern_array[index] += move_number * pow(base, block_length_array[first_block_index] - different_offsite);
-            move_number = temp_store % move_base;
-            index ++ ;
+            if(index == 0){
+                temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] * move_base + move_number;
+                index --;
+                continue;
+            }
+            temp_store = temp_text_fingerprint_array[index];
+            temp_text_fingerprint_array[index] = temp_store % leave_base;
+            temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] * move_base + move_number;
+            move_number = temp_store / leave_base;
+            index --;  
         }
     }
     // move reversed pattern array forward
@@ -506,7 +509,7 @@ int main(int argc, char** argv){
 
     std::cout << "final count:   " <<count << std::endl;
     float time_taken = end - start;
-    std::cout << "milliseconds:  " << time_taken << std::endl;
+    std::cout << std::setprecision(9) << "milliseconds:  " << time_taken << std::endl;
 
     // the max unsigned int is to 13. the block length can be 14
     // the max unsigned long int is to 20.  the block length can be 21.
