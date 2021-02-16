@@ -610,8 +610,8 @@ int main(int argc, char** argv){
     auto end = std::chrono::high_resolution_clock::now();
 
     std::cout << "final count:   " <<count << std::endl;
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>( end - start ).count();
-    std::cout << std::setprecision(9) << "microseconds:  " << duration << std::endl;
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end - start ).count();
+    std::cout << std::setprecision(9) << "milliseconds:  " << duration << std::endl;
 
     std::cout << "number of false match:    " << false_match << std::endl;
 
