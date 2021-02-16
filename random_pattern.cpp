@@ -5,11 +5,13 @@
 #include <vector>
 #include <boost/program_options.hpp>
 #include <time.h>
+#include <limits>
+
 
 
 unsigned int prime_base = 0;
 
-const unsigned int base = 5;
+unsigned int base = 0;
 
 unsigned int * block_length_array;
 
@@ -28,6 +30,8 @@ unsigned int * text_fingerprint_array;
 std::string * text_number_array;
 
 bool debug_mode = false;
+
+unsigned int false_match = 0;
 
 std::map<std::string, std::string> create_letterMap(){
     std::map<std::string, std::string> letterMap;
@@ -66,19 +70,20 @@ bool is_prime(int n)
 void prime_base_generation(unsigned int n){
     std::vector<unsigned int> prime_vector;
     int i = 2;
-    while(prime_vector.size() < n){
-        if(is_prime(i)){
-            prime_vector.push_back(i);
-        }
-        i++;
-    }
-    //for (int i = 2; i <= n; i++){
-    //    if(is_prime(i))
+    //while(prime_vector.size() < n){
+    //    if(is_prime(i)){
     //        prime_vector.push_back(i);
-    //    std::cout << prime_vector.size() << std::endl;
+    //    }
+    //    i++;
     //}
+    for (int i = 2; i <= n; i++){
+        if(is_prime(i))
+            prime_vector.push_back(i);
+        //std::cout << prime_vector.size() << std::endl;
+    }
     srand ( time(0) );
     prime_base = prime_vector.at(rand() % prime_vector.size());
+    //prime_base = prime_vector.back();
 }
 
 void block_length_array_generation(std::string pattern, unsigned int block_length){
@@ -89,7 +94,6 @@ void block_length_array_generation(std::string pattern, unsigned int block_lengt
         block_length_array[i] = std::min(block_length, (unsigned int)(pattern.size() - i * block_length));
         reversed_block_length_array[number_blocks - 1 - i] = block_length_array[i];
     }
-
 }
 
 unsigned int pow_mod(unsigned int base, unsigned int times){
@@ -98,6 +102,17 @@ unsigned int pow_mod(unsigned int base, unsigned int times){
         result = result * base;
         result = result % prime_base;
     }
+
+    //unsigned int result = 1;
+    //unsigned int temp_result = 0;
+    //for(int i = 0; i < times; ++i){
+    //    temp_result = 0;
+    //    for(int j = 0; j < base; j++){
+    //        temp_result += result;
+    //        temp_result =  temp_result % prime_base;
+    //    }
+    //    result = temp_result;
+    //}
     return result;
 }
 
@@ -138,6 +153,16 @@ void reverse_array_entry(std::string * original_array, std::string * reverse_arr
     
 }
 
+unsigned int mul(unsigned a, unsigned b){
+    unsigned int result = 0;
+    //for(int i = 0; i < b; i++){
+    //    result += a;
+    //    result = result % prime_base;
+    //}
+    result = (a*b) % prime_base;
+    return result;
+}
+
 int find_the_first_difference(std::string s1, std::string s2){
     for(int i = 0; i < s1.length(); ++i){
         if(s1.substr(i,1) != s2.substr(i,1)){
@@ -158,6 +183,7 @@ void identify_different_blocks(unsigned int * first, unsigned int * last, bool *
             if(text_number_array[i] != pattern_number_array[i]){
                 * first = i;
                 * exist_difference = true;
+                false_match += 1;
                 break;
             }  
         }
@@ -172,6 +198,7 @@ void identify_different_blocks(unsigned int * first, unsigned int * last, bool *
         if(text_fingerprint_array[i] == pattern_fingerprint_array[i]){
             if(text_number_array[i] != pattern_number_array[i]){
                 * last = i;
+                false_match += 1;
                 break;
             }  
         }
@@ -247,6 +274,7 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
     retrieve_array(reversal_pattern_fingerprint_array, reversal_pattern_number_array, temp_reversal_pattern_fingerprint_array,
                     temp_reversal_pattern_number_array, number_blocks - last_block_index - 1, reversed_first_offsite,
                     number_blocks - first_block_index - 1, reversed_last_offsite, reversed_block_length_array);
+    
 
     if(first_block_index != last_block_index)  {
         // off site
@@ -259,6 +287,7 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
 
         //move temp text array forward
         if(first_offsite > reversed_first_offsite){
+
             temp_fingerprint_store = 0;
             temp_number_store = "";
             move_fingerprint = 0;
@@ -273,7 +302,7 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
 
                     temp_text_number_array[index] = temp_text_number_array[index].substr(different_offsite, temp_text_number_array[index].length() - different_offsite);
 
-                    temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] + prime_base - (move_fingerprint * pow_mod(base, last_offsite + 1 - different_offsite)) % prime_base;
+                    temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] + prime_base - (mul(move_fingerprint , pow_mod(base, last_offsite + 1 - different_offsite))) % prime_base;
                     temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
 
                     index -- ;
@@ -282,7 +311,7 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
                 if(index == 0){
                     temp_text_number_array[index] = temp_text_number_array[index] + move_number;
 
-                    temp_text_fingerprint_array[index] = (temp_text_fingerprint_array[index] * pow_mod(base, different_offsite)) % prime_base + move_fingerprint;
+                    temp_text_fingerprint_array[index] = ( mul( temp_text_fingerprint_array[index] , pow_mod(base, different_offsite))) % prime_base + move_fingerprint;
                     temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
 
                     index --;
@@ -292,10 +321,13 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
                 temp_fingerprint_store = temp_text_fingerprint_array[index];
 
                 temp_text_number_array[index] = temp_number_store.substr(different_offsite, temp_number_store.length() - different_offsite) + move_number;
-            
-                temp_text_fingerprint_array[index] = (temp_fingerprint_store + prime_base) - (fingerprint_computation(temp_number_store.substr(0, different_offsite)) * pow_mod(base, block_length_array[index + first_block_index] - different_offsite)) % prime_base;
-                temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] * pow_mod(base, different_offsite) + move_fingerprint;
+
+                temp_text_fingerprint_array[index] = (temp_fingerprint_store + prime_base) - mul(fingerprint_computation(temp_number_store.substr(0, different_offsite)) , pow_mod(base, block_length_array[index + first_block_index] - different_offsite)) % prime_base;
                 temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
+                temp_text_fingerprint_array[index] = mul(temp_text_fingerprint_array[index] , pow_mod(base, different_offsite)) + move_fingerprint;
+
+                temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
+
 
                 move_number = temp_number_store.substr(0, different_offsite);
                 move_fingerprint = fingerprint_computation(move_number);
@@ -319,7 +351,7 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
 
                     temp_reversal_pattern_number_array[index] = temp_reversal_pattern_number_array[index].substr(different_offsite, temp_reversal_pattern_number_array[index].length() - different_offsite);
 
-                    temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] + prime_base - (move_fingerprint * pow_mod(base, reversed_last_offsite + 1 - different_offsite)) % prime_base;
+                    temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] + prime_base - mul(move_fingerprint , pow_mod(base, reversed_last_offsite + 1 - different_offsite)) % prime_base;
                     temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
 
                     index -- ;
@@ -328,7 +360,7 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
                 if(index == 0){
                     temp_reversal_pattern_number_array[index] = temp_reversal_pattern_number_array[index] + move_number;
 
-                    temp_reversal_pattern_fingerprint_array[index] = (temp_reversal_pattern_fingerprint_array[index] * pow_mod(base, different_offsite)) % prime_base + move_fingerprint;
+                    temp_reversal_pattern_fingerprint_array[index] = mul(temp_reversal_pattern_fingerprint_array[index] , pow_mod(base, different_offsite)) % prime_base + move_fingerprint;
                     temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
 
                     index --;
@@ -339,8 +371,10 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
 
                 temp_reversal_pattern_number_array[index] = temp_number_store.substr(different_offsite, temp_number_store.length() - different_offsite) + move_number;
             
-                temp_reversal_pattern_fingerprint_array[index] = (temp_fingerprint_store + prime_base) - (fingerprint_computation(temp_number_store.substr(0, different_offsite)) * pow_mod(base, reversed_block_length_array[index + first_block_index] - different_offsite)) % prime_base;
-                temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] * pow_mod(base, different_offsite) + move_fingerprint;
+                temp_reversal_pattern_fingerprint_array[index] = (temp_fingerprint_store + prime_base) - mul(fingerprint_computation(temp_number_store.substr(0, different_offsite)) , pow_mod(base, reversed_block_length_array[index + first_block_index] - different_offsite)) % prime_base;
+                temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
+
+                temp_reversal_pattern_fingerprint_array[index] = mul(temp_reversal_pattern_fingerprint_array[index] , pow_mod(base, different_offsite)) + move_fingerprint;
                 temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
 
                 move_number = temp_number_store.substr(0, different_offsite);
@@ -351,12 +385,14 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
     }
 
     for(unsigned int i = 0; i <= last_block_index - first_block_index; ++i){
-        if(temp_text_fingerprint_array[i] == temp_reversal_pattern_fingerprint_array[i]){
-            if(temp_text_number_array[i] != temp_reversal_pattern_number_array[i]){
-                return false;
-            }
+        if(temp_text_fingerprint_array[i] != temp_reversal_pattern_fingerprint_array[i]){
+            return false;
         }
-        else{
+    }
+    for(unsigned int i = 0; i <= last_block_index - first_block_index; ++i){
+        if(temp_text_number_array[i] != temp_reversal_pattern_number_array[i]){
+            false_match += 1;
+            std::cout << "false" << std::endl;
             return false;
         }
     }
@@ -372,10 +408,13 @@ void slide_window(std::string last_letter){
         letter = text_number_array[index + 1].substr(0,1);
         front = text_number_array[index].substr(0,1);
         text_number_array[index] = text_number_array[index].substr(1, block_length_array[index] - 1) + letter;
-
+        
         text_fingerprint_array[index] = text_fingerprint_array[index] + prime_base;
+
         text_fingerprint_array[index] -= (std::stoi(front) * pow_mod(base, block_length_array[index] - 1)) % prime_base ;
-        text_fingerprint_array[index] = (text_fingerprint_array[index] * base + std::stoi(letter)) % prime_base;
+        text_fingerprint_array[index] = text_fingerprint_array[index] % prime_base;
+
+        text_fingerprint_array[index] = (mul(text_fingerprint_array[index], base) + std::stoi(letter)) % prime_base;
 
         index ++;
     }
@@ -385,7 +424,8 @@ void slide_window(std::string last_letter){
 
     text_fingerprint_array[index] = text_fingerprint_array[index] + prime_base;
     text_fingerprint_array[index] -= (std::stoi(front) * pow_mod(base, block_length_array[index] - 1)) % prime_base;
-    text_fingerprint_array[index] = (text_fingerprint_array[index] * base + std::stoi(last_letter)) % prime_base;
+    text_fingerprint_array[index] = text_fingerprint_array[index] % prime_base;
+    text_fingerprint_array[index] = (mul(text_fingerprint_array[index] , base) + std::stoi(last_letter)) % prime_base;
 }
 
 std::string convert_array_to_string(std::string* array, int length){
@@ -446,7 +486,7 @@ unsigned int count_pattern(std::string text, std::string pattern){
 
             if (reversal_exists(first_block_index, first_offsite, last_block_index, last_offsite))
             {
-                count += 1;
+                count += 1; 
             }
         }
         else{  
@@ -547,9 +587,9 @@ std::string read_file(std::string file_name, unsigned int max_length){
 }
 
 int main(int argc, char** argv){
-    int pattern_length;
-    std::string text_file_name;
-    int text_length;
+    int pattern_length = 0;
+    std::string text_file_name = "";
+    int text_length = 0;
     program_options(argc, argv, pattern_length, text_file_name, text_length, debug_mode);
 
     std::string text_letter = read_file(text_file_name, text_length);
@@ -559,18 +599,21 @@ int main(int argc, char** argv){
     std::string pattern_number = letter_to_number(pattern_letter);
 
     // randomly generate the prime number based on the input.
-    prime_base_generation(pattern_number.length() * 2);
+    double t = 1.1;
+    unsigned int biggest = text_length * t;
+    prime_base_generation(biggest);
+    base = 5;
     std::cout << "prime base: " << prime_base << std::endl;
 
-    clock_t start, end;
-    start = clock();
+    auto start = std::chrono::high_resolution_clock::now();
     unsigned int count = count_pattern(text_number, pattern_number);
-    end = clock();
+    auto end = std::chrono::high_resolution_clock::now();
 
     std::cout << "final count:   " <<count << std::endl;
-    float time_taken = end - start;
-    std::cout << std::setprecision(9) << "milliseconds:  " << time_taken << std::endl;
-    std::cout << std::setprecision(9) << "seconds:  " << time_taken / CLOCKS_PER_SEC << std::endl;
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>( end - start ).count();
+    std::cout << std::setprecision(9) << "microseconds:  " << duration << std::endl;
+
+    std::cout << "number of false match:    " << false_match << std::endl;
 
 
     return 0;
