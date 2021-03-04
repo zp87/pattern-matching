@@ -4,9 +4,9 @@
 #include <fstream>
 #include <vector>
 #include <boost/program_options.hpp>
+#include <boost/dynamic_bitset.hpp>
 #include <time.h>
 #include <limits>
-
 
 
 unsigned int prime_base = 0;
@@ -32,6 +32,8 @@ std::string * text_number_array;
 bool debug_mode = false;
 
 unsigned int false_match = 0;
+unsigned int count_zero = 0;
+unsigned int count_one = 0;
 
 std::map<std::string, std::string> create_letterMap(){
     std::map<std::string, std::string> letterMap;
@@ -52,39 +54,54 @@ std::string letter_to_number(std::string content){
     return number_string;
 }
 
-//generate all prime numbers
-bool is_prime(int n) 
-{ 
-    // Corner case 
-    if (n <= 1) 
-        return false; 
-  
-    // Check from 2 to n-1 
-    for (int i = 2; i < n; i++) 
-        if (n % i == 0) 
-            return false; 
-  
-    return true; 
-}
 
-void prime_base_generation(unsigned int n){
+void SieveOfAtkin(int limit) 
+{ 
     std::vector<unsigned int> prime_vector;
-    int i = 2;
-    //while(prime_vector.size() < n){
-    //    if(is_prime(i)){
-    //        prime_vector.push_back(i);
-    //    }
-    //    i++;
-    //}
-    for (int i = 2; i <= n; i++){
-        if(is_prime(i))
-            prime_vector.push_back(i);
-        //std::cout << prime_vector.size() << std::endl;
-    }
+
+    prime_vector.push_back(2);
+    prime_vector.push_back(3);
+
+    // Initialise the sieve array with false values 
+    boost::dynamic_bitset<> sieve(limit); 
+
+    for (int i = 0; i < limit; i++) 
+        sieve[i] = false; 
+
+    for (int x = 1; x * x < limit; x++) { 
+        for (int y = 1; y * y < limit; y++) { 
+              
+            // Main part of Sieve of Atkin 
+            int n = (4 * x * x) + (y * y); 
+            if (n <= limit && (n % 12 == 1 || n % 12 == 5)) 
+                sieve[n] ^= true; 
+  
+            n = (3 * x * x) + (y * y); 
+            if (n <= limit && n % 12 == 7) 
+                sieve[n] ^= true; 
+  
+            n = (3 * x * x) - (y * y); 
+            if (x > y && n <= limit && n % 12 == 11) 
+                sieve[n] ^= true; 
+        } 
+    } 
+  
+    // Mark all multiples of squares as non-prime 
+    for (int r = 5; r * r < limit; r++) { 
+        if (sieve[r]) { 
+            for (int i = r * r; i < limit; i += r * r) 
+                sieve[i] = false; 
+        } 
+    } 
+  
+    // Print primes using sieve[] 
+    for (int a = 5; a < limit; a++) 
+        if (sieve[a]) 
+            prime_vector.push_back(a);
+
     srand ( time(0) );
     prime_base = prime_vector.at(rand() % prime_vector.size());
-    //prime_base = prime_vector.back();
-}
+} 
 
 void block_length_array_generation(std::string pattern, unsigned int block_length){
     block_length_array = new unsigned int[number_blocks];
@@ -266,7 +283,6 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
     retrieve_array(text_fingerprint_array, text_number_array, temp_text_fingerprint_array, temp_text_number_array, 
                     first_block_index, first_offsite, last_block_index, last_offsite, block_length_array);
     
-
     unsigned int temp_reversal_pattern_fingerprint_array[last_block_index - first_block_index + 1];
     std::string temp_reversal_pattern_number_array[last_block_index - first_block_index + 1];
     unsigned int reversed_first_offsite = block_length_array[last_block_index] - last_offsite - 1;
@@ -275,7 +291,6 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
                     temp_reversal_pattern_number_array, number_blocks - last_block_index - 1, reversed_first_offsite,
                     number_blocks - first_block_index - 1, reversed_last_offsite, reversed_block_length_array);
     
-
     if(first_block_index != last_block_index)  {
         // off site
         unsigned int different_offsite = 0;
@@ -286,13 +301,14 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
         std::string move_number;
 
         //move temp text array forward
-        if(first_offsite > reversed_first_offsite){
+        if(block_length_array[first_block_index] - first_offsite < block_length_array[last_block_index] - reversed_first_offsite){
 
             temp_fingerprint_store = 0;
             temp_number_store = "";
             move_fingerprint = 0;
             temp_number_store = "";
-            different_offsite = first_offsite - reversed_first_offsite;
+            //different_offsite = first_offsite - reversed_first_offsite;
+            different_offsite = block_length_array[last_block_index] - reversed_first_offsite - block_length_array[first_block_index] + first_offsite;
             index = last_block_index - first_block_index;
 
             while(index >= 0){
@@ -336,12 +352,13 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
         }
 
         //move temp reversed pattern array forward
-        else{
+        else if (block_length_array[first_block_index] - first_offsite > block_length_array[last_block_index] - reversed_first_offsite){
             temp_fingerprint_store = 0;
             temp_number_store = "";
             move_fingerprint = 0;
             temp_number_store = "";
-            different_offsite = reversed_first_offsite - first_offsite;
+            //different_offsite = reversed_first_offsite - first_offsite;
+            different_offsite = block_length_array[first_block_index] - first_offsite - block_length_array[last_block_index] + reversed_first_offsite;
             index = last_block_index - first_block_index;
 
             while(index >= 0){
@@ -436,9 +453,9 @@ std::string convert_array_to_string(std::string* array, int length){
     return result;
 }
 
-unsigned int count_pattern(std::string text, std::string pattern){
+void count_pattern(std::string text, std::string pattern){
     unsigned int block_length = sqrt(pattern.size());
-    unsigned int count = 0;
+    //unsigned int count = 0;
     
     number_blocks = pattern.size()/block_length;
     pattern.size() % block_length > 0 ? number_blocks += 1: NULL;
@@ -483,14 +500,14 @@ unsigned int count_pattern(std::string text, std::string pattern){
 
             last_offsite = find_last_index_linear(text_number_array[last_block_index], 
                             pattern_number_array[last_block_index], block_length_array[last_block_index]);
-
+            
             if (reversal_exists(first_block_index, first_offsite, last_block_index, last_offsite))
             {
-                count += 1; 
+                count_one += 1; 
             }
         }
         else{  
-            count += 1;
+            count_zero += 1;
         }
 
         index ++;
@@ -499,7 +516,6 @@ unsigned int count_pattern(std::string text, std::string pattern){
         }
         if(debug_mode){
             std::cout << "index:      " << index << std::endl;
-            std::cout << "count:      " << count << std::endl;
             std::cout << first_block_index << "   " << first_offsite << "   " << last_block_index << "   " << last_offsite << std::endl;
             std::cout << "pattern:    " << convert_array_to_string(pattern_number_array, number_blocks) << std::endl;
             std::cout << "text:       " << convert_array_to_string(text_number_array, number_blocks) << std::endl;
@@ -511,7 +527,6 @@ unsigned int count_pattern(std::string text, std::string pattern){
     
     first = NULL, last = NULL, exist_pointer = NULL;
 
-    return count;
 }
 
 void program_options(int argc, char* argv[], int& pattern_length, std::string& text_file_name, int& text_length, bool& debug_mode){
@@ -598,20 +613,26 @@ int main(int argc, char** argv){
     std::string text_number = letter_to_number(text_letter);
     std::string pattern_number = letter_to_number(pattern_letter);
 
+
     // randomly generate the prime number based on the input.
-    double t = 1.1;
+    double t = pattern_number.length();
     unsigned int biggest = text_length * t;
-    prime_base_generation(biggest);
+    auto start1 = std::chrono::high_resolution_clock::now();
+
+    SieveOfAtkin(biggest);
     base = 5;
     std::cout << "prime base: " << prime_base << std::endl;
 
     auto start = std::chrono::high_resolution_clock::now();
-    unsigned int count = count_pattern(text_number, pattern_number);
+    count_pattern(text_number, pattern_number);
     auto end = std::chrono::high_resolution_clock::now();
 
-    std::cout << "final count:   " <<count << std::endl;
+    std::cout << "Distance zero:   " <<count_zero << std::endl;
+    std::cout << "Distance one:   " <<count_one << std::endl;
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end - start ).count();
+    auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>( end - start1 ).count();
     std::cout << std::setprecision(9) << "milliseconds:  " << duration << std::endl;
+    std::cout << std::setprecision(9) << "milliseconds1:  " << duration1 << std::endl;
 
     std::cout << "number of false match:    " << false_match << std::endl;
 
