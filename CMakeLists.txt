@@ -10,3 +10,6 @@ target_link_libraries(pattern_matching ${Boost_PROGRAM_OPTIONS_LIBRARY})
 
 add_executable(pattern_matching_random random_pattern.cpp )
 target_link_libraries(pattern_matching_random ${Boost_PROGRAM_OPTIONS_LIBRARY})
+
+add_executable(hamming hamming.cpp)
+target_link_libraries(hamming ${Boost_PROGRAM_OPTIONS_LIBRARY})
