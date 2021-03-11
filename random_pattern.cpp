@@ -7,7 +7,9 @@
 #include <boost/dynamic_bitset.hpp>
 #include <time.h>
 #include <limits>
+#include <algorithm>
 
+unsigned int mul(unsigned int a, unsigned int b);
 
 unsigned int prime_base = 0;
 
@@ -34,6 +36,8 @@ bool debug_mode = false;
 unsigned int false_match = 0;
 unsigned int count_zero = 0;
 unsigned int count_one = 0;
+
+std::vector<std::string> found_text;
 
 std::map<std::string, std::string> create_letterMap(){
     std::map<std::string, std::string> letterMap;
@@ -94,13 +98,13 @@ void SieveOfAtkin(int limit)
         } 
     } 
   
-    // Print primes using sieve[] 
     for (int a = 5; a < limit; a++) 
         if (sieve[a]) 
             prime_vector.push_back(a);
 
     srand ( time(0) );
-    prime_base = prime_vector.at(rand() % prime_vector.size());
+    base = prime_vector.at(rand() % prime_vector.size());
+    prime_base = prime_vector.back();
 } 
 
 void block_length_array_generation(std::string pattern, unsigned int block_length){
@@ -114,22 +118,16 @@ void block_length_array_generation(std::string pattern, unsigned int block_lengt
 }
 
 unsigned int pow_mod(unsigned int base, unsigned int times){
+    //unsigned int result = 1;
+    //for(int i = 0; i < times; ++i){
+    //    result = result * base;
+    //    result = result % prime_base;
+    //}
+
     unsigned int result = 1;
     for(int i = 0; i < times; ++i){
-        result = result * base;
-        result = result % prime_base;
+        result = mul(result, base);
     }
-
-    //unsigned int result = 1;
-    //unsigned int temp_result = 0;
-    //for(int i = 0; i < times; ++i){
-    //    temp_result = 0;
-    //    for(int j = 0; j < base; j++){
-    //        temp_result += result;
-    //        temp_result =  temp_result % prime_base;
-    //    }
-    //    result = temp_result;
-    //}
     return result;
 }
 
@@ -170,15 +168,35 @@ void reverse_array_entry(std::string * original_array, std::string * reverse_arr
     
 }
 
-unsigned int mul(unsigned a, unsigned b){
+unsigned int mul(unsigned int a, unsigned int b){
     unsigned int result = 0;
+    unsigned int index = 0;
+    unsigned int max_unsigned_int_size = std::numeric_limits<unsigned int>::max();
+
+    unsigned max = std::max(a,b);
+    unsigned int gap = max_unsigned_int_size / max  - 5;
     //for(int i = 0; i < b; i++){
     //    result += a;
     //    result = result % prime_base;
     //}
-    result = (a*b) % prime_base;
+    if (gap > b){
+        return (a*b) % prime_base;
+    }
+
+    while(index < b - gap){    
+        result += a * gap;
+        result = result % prime_base;
+        index += gap;
+    }
+
+    result += a * (b - index);
+    result = result % prime_base;
+
+    //result = (a*b) % prime_base;
     return result;
 }
+
+
 
 int find_the_first_difference(std::string s1, std::string s2){
     for(int i = 0; i < s1.length(); ++i){
@@ -197,12 +215,12 @@ void identify_different_blocks(unsigned int * first, unsigned int * last, bool *
     for(int i = 0; i < number_blocks; ++i){
         // if the fingerprint of two blocks are equal to each. we will check the real content.
         if(text_fingerprint_array[i] == pattern_fingerprint_array[i]){
-            if(text_number_array[i] != pattern_number_array[i]){
-                * first = i;
-                * exist_difference = true;
-                false_match += 1;
-                break;
-            }  
+            //if(text_number_array[i] != pattern_number_array[i]){
+            //    * first = i;
+            //    * exist_difference = true;
+            //    false_match += 1;
+            //    break;
+            //}  
         }
         else{
             * first = i;
@@ -213,11 +231,11 @@ void identify_different_blocks(unsigned int * first, unsigned int * last, bool *
     // fnd the last block index
     for(int i = number_blocks - 1; i >= 0; --i){
         if(text_fingerprint_array[i] == pattern_fingerprint_array[i]){
-            if(text_number_array[i] != pattern_number_array[i]){
-                * last = i;
-                false_match += 1;
-                break;
-            }  
+            //if(text_number_array[i] != pattern_number_array[i]){
+            //    * last = i;
+            //    false_match += 1;
+            //    break;
+            //}  
         }
         else{
             * last = i;
@@ -406,13 +424,13 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
             return false;
         }
     }
-    for(unsigned int i = 0; i <= last_block_index - first_block_index; ++i){
-        if(temp_text_number_array[i] != temp_reversal_pattern_number_array[i]){
-            false_match += 1;
-            std::cout << "false" << std::endl;
-            return false;
-        }
-    }
+    //for(unsigned int i = 0; i <= last_block_index - first_block_index; ++i){
+    //    if(temp_text_number_array[i] != temp_reversal_pattern_number_array[i]){
+    //        false_match += 1;
+            //std::cout << "false" << std::endl;
+    //        return false;
+    //    }
+    //}
     return true;
 }
 
@@ -454,7 +472,8 @@ std::string convert_array_to_string(std::string* array, int length){
 }
 
 void count_pattern(std::string text, std::string pattern){
-    unsigned int block_length = sqrt(pattern.size());
+    //unsigned int block_length = sqrt(pattern.size());
+    unsigned int block_length = pattern.size();
     //unsigned int count = 0;
     
     number_blocks = pattern.size()/block_length;
@@ -491,6 +510,7 @@ void count_pattern(std::string text, std::string pattern){
     // loop part.
 
     while(true){
+        exist_difference = false;
         identify_different_blocks(first, last, exist_pointer);
 
         if(exist_difference){
@@ -504,9 +524,20 @@ void count_pattern(std::string text, std::string pattern){
             if (reversal_exists(first_block_index, first_offsite, last_block_index, last_offsite))
             {
                 count_one += 1; 
+                found_text.push_back(text.substr(index, pattern.length()));
+                //if(text.substr(index, pattern.length()) == "3434"){
+                //    std::cout << first_block_index << "   " << last_block_index << " " << std::endl;
+                //    std::cout << first_offsite << "     " << last_offsite << "    " << std::endl;
+                //    
+                //    std::cout << text_number_array[0] << "    " << text_fingerprint_array[0] <<std::endl;
+                //    std::cout << pattern_number_array[0] << "    " << pattern_fingerprint_array[0] <<std::endl;
+
+                //    std::cout << "-----------" <<std::endl;
+                //}
             }
         }
-        else{  
+        else{
+
             count_zero += 1;
         }
 
@@ -601,10 +632,55 @@ std::string read_file(std::string file_name, unsigned int max_length){
     return result;
 }
 
+int final_check(std::vector<std::string> text_vector, std::string pattern){
+    int result = 0;
+    std::string temp = "";
+    std::string rev_text = "";
+    for(int i = 0; i < text_vector.size(); i++){
+        temp = text_vector.at(i);
+        //identify first & last
+        int first = -1;
+        int last = -1;
+        for(int j = 0; j < temp.length(); j++){
+            if(temp.substr(j,1).compare(pattern.substr(j,1)) != 0){
+                first = j;
+                break;
+            }
+        }
+        for(int j = temp.length() - 1; j >= 0; j--){
+            if(temp.substr(j,1).compare(pattern.substr(j,1)) != 0){
+                last = j;
+                break;
+            }
+        }
+        if(first < last){
+            rev_text = temp.substr(first, last - first + 1);
+            std::reverse(rev_text.begin(), rev_text.end());
+            if(pattern.substr(first, last - first + 1).compare(rev_text) == 0){
+                result += 1;
+            }
+            else{
+                std::cout << temp << std::endl;
+            }
+        }
+        else{
+            std::cout << temp << std::endl;
+        }
+    }
+
+    return result;
+}
+
 int main(int argc, char** argv){
     int pattern_length = 0;
     std::string text_file_name = "";
     int text_length = 0;
+    //unsigned int prime_base = 5;
+    //std::cout << "test  " << std::endl;
+
+    //std::cout << mul(100 , 500) << std::endl;
+    //return 0;
+
     program_options(argc, argv, pattern_length, text_file_name, text_length, debug_mode);
 
     std::string text_letter = read_file(text_file_name, text_length);
@@ -613,28 +689,34 @@ int main(int argc, char** argv){
     std::string text_number = letter_to_number(text_letter);
     std::string pattern_number = letter_to_number(pattern_letter);
 
-
     // randomly generate the prime number based on the input.
     double t = pattern_number.length();
     unsigned int biggest = text_length * t;
-    auto start1 = std::chrono::high_resolution_clock::now();
-
-    SieveOfAtkin(biggest);
-    base = 5;
-    std::cout << "prime base: " << prime_base << std::endl;
-
     auto start = std::chrono::high_resolution_clock::now();
+    //for(int i = 0; i < 3; i++){
+    
+    //std::cout << pattern_number  <<std::endl;
+    //text_number = "23434";
+    SieveOfAtkin(biggest);
+    //prime_base = 399989;
+    //base = 377789;
+    //text_number = "3434";
+    //pattern_number = "3434";
+    std::cout << "prime base  p: " << prime_base << std::endl;
+    std::cout << "base   r:   " << base <<std::endl;
     count_pattern(text_number, pattern_number);
+    //}
     auto end = std::chrono::high_resolution_clock::now();
 
-    std::cout << "Distance zero:   " <<count_zero << std::endl;
+    std::cout << "Distance zero:   " <<(count_zero - 1)<< std::endl;
     std::cout << "Distance one:   " <<count_one << std::endl;
+    std::cout << "vector size:    " << found_text.size() << std::endl;
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end - start ).count();
-    auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>( end - start1 ).count();
     std::cout << std::setprecision(9) << "milliseconds:  " << duration << std::endl;
-    std::cout << std::setprecision(9) << "milliseconds1:  " << duration1 << std::endl;
 
-    std::cout << "number of false match:    " << false_match << std::endl;
+    // std::cout << "number of false match:    " << false_match << std::endl;
+    
+    std::cout << final_check(found_text, pattern_number)<<std::endl;
 
 
     return 0;

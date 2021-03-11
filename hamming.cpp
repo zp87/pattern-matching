@@ -65,7 +65,7 @@ int count_hamming_one(std::string text, std::string pattern){
     int rest = 0;
     int pattern_length = pattern.length();
     for(int i = 0; i < text.length() - pattern_length + 1; i++){
-        if(hamming_distance(text.substr(i, pattern_length), pattern) == 1){
+        if(hamming_distance(text.substr(i, pattern_length), pattern) == 0){
             counter += 1;
         }
     }
