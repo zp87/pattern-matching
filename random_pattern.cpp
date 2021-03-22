@@ -8,6 +8,9 @@
 #include <time.h>
 #include <limits>
 #include <algorithm>
+#include "generation.cpp"
+#include <chrono>
+
 
 unsigned int mul(unsigned int a, unsigned int b);
 
@@ -36,6 +39,8 @@ bool debug_mode = false;
 unsigned int false_match = 0;
 unsigned int count_zero = 0;
 unsigned int count_one = 0;
+
+unsigned int one_round_different = 0;
 
 std::vector<std::string> found_text;
 
@@ -135,9 +140,11 @@ unsigned int pow_mod(unsigned int base, unsigned int times){
 unsigned int fingerprint_computation(std::string block){
     unsigned int result = 0;
     for(int i = 0 ; i < block.size(); ++i){
-        result += std::stoi(block.substr(i,1)) * pow_mod(base, block.size() - i - 1);
-        result = result % prime_base;
+    //    result += std::stoi(block.substr(i,1)) * pow_mod(base, block.size() - i - 1);
+    //    result = result % prime_base;
+        result = mul(result, base) + std::stoi(block.substr(i,1));
     }
+    result = result % prime_base;
     return result;
 }
 
@@ -169,20 +176,21 @@ void reverse_array_entry(std::string * original_array, std::string * reverse_arr
 }
 
 unsigned int mul(unsigned int a, unsigned int b){
-    unsigned int result = 0;
-    unsigned int index = 0;
-    unsigned int max_unsigned_int_size = std::numeric_limits<unsigned int>::max();
+    unsigned long result = 0;
+    unsigned long index = 0;
+    unsigned long max_unsigned_long_size = std::numeric_limits<unsigned long>::max();
 
-    unsigned max = std::max(a,b);
-    unsigned int gap = max_unsigned_int_size / max  - 5;
+    unsigned int max = std::max(a,b);
+    unsigned long gap = max_unsigned_long_size / max  - 5;
     //for(int i = 0; i < b; i++){
     //    result += a;
     //    result = result % prime_base;
     //}
     if (gap > b){
-        return (a*b) % prime_base;
+        result = (a * (unsigned long)b) % prime_base;
+        return (unsigned int)result;
     }
-
+    std::cout << "mul need to modfiy" << std::endl;
     while(index < b - gap){    
         result += a * gap;
         result = result % prime_base;
@@ -193,19 +201,9 @@ unsigned int mul(unsigned int a, unsigned int b){
     result = result % prime_base;
 
     //result = (a*b) % prime_base;
-    return result;
+    return (unsigned int)result;
 }
 
-
-
-int find_the_first_difference(std::string s1, std::string s2){
-    for(int i = 0; i < s1.length(); ++i){
-        if(s1.substr(i,1) != s2.substr(i,1)){
-            return i;
-        }
-    }
-    return -1;
-}
 
 void identify_different_blocks(unsigned int * first, unsigned int * last, bool * exist_difference){
     * exist_difference = false;
@@ -417,6 +415,7 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
                 index --;
             }
         }
+        one_round_different += different_offsite;
     }
 
     for(unsigned int i = 0; i <= last_block_index - first_block_index; ++i){
@@ -472,9 +471,18 @@ std::string convert_array_to_string(std::string* array, int length){
 }
 
 void count_pattern(std::string text, std::string pattern){
-    //unsigned int block_length = sqrt(pattern.size());
-    unsigned int block_length = pattern.size();
-    //unsigned int count = 0;
+    false_match = 0;
+    count_zero = 0;
+    count_one = 0;
+    found_text.clear();
+    one_round_different = 0;
+
+    unsigned int block_length = sqrt(pattern.size());
+    if (block_length * block_length < pattern.size()){
+        block_length += 1;
+    }
+
+    //unsigned int block_length = pattern.size();
     
     number_blocks = pattern.size()/block_length;
     pattern.size() % block_length > 0 ? number_blocks += 1: NULL;
@@ -525,15 +533,6 @@ void count_pattern(std::string text, std::string pattern){
             {
                 count_one += 1; 
                 found_text.push_back(text.substr(index, pattern.length()));
-                //if(text.substr(index, pattern.length()) == "3434"){
-                //    std::cout << first_block_index << "   " << last_block_index << " " << std::endl;
-                //    std::cout << first_offsite << "     " << last_offsite << "    " << std::endl;
-                //    
-                //    std::cout << text_number_array[0] << "    " << text_fingerprint_array[0] <<std::endl;
-                //    std::cout << pattern_number_array[0] << "    " << pattern_fingerprint_array[0] <<std::endl;
-
-                //    std::cout << "-----------" <<std::endl;
-                //}
             }
         }
         else{
@@ -544,13 +543,6 @@ void count_pattern(std::string text, std::string pattern){
         index ++;
         if(index >= text.size() - pattern.size() + 1){
             break;
-        }
-        if(debug_mode){
-            std::cout << "index:      " << index << std::endl;
-            std::cout << first_block_index << "   " << first_offsite << "   " << last_block_index << "   " << last_offsite << std::endl;
-            std::cout << "pattern:    " << convert_array_to_string(pattern_number_array, number_blocks) << std::endl;
-            std::cout << "text:       " << convert_array_to_string(text_number_array, number_blocks) << std::endl;
-            std::cout << "------------------------------" << std::endl;
         }
         //slide window
         slide_window(text.substr(pattern.size() + index - 1, 1));
@@ -567,14 +559,11 @@ void program_options(int argc, char* argv[], int& pattern_length, std::string& t
                     ("help", "produce help message")
                     ("pattern_length", po::value<int>(&pattern_length)->default_value(9), "the length of pattern")
                     ("text_file_name", po::value<std::string>(&text_file_name)->default_value("data/Escherichia_coli_strain_FORC_028.fasta"), "file storing the input sequence")
-                    ("text_length", po::value<int>(&text_length)->default_value(25), "the length of text")
-                    ("debug_mode", po::value<bool>(&debug_mode)->default_value(false), "print all factors");
-
+                    ("text_length", po::value<int>(&text_length)->default_value(25), "the length of text");
     po::positional_options_description pos;
     pos.add("pattern_length", 1);
     pos.add("text_file_name", 1);
     pos.add("text_length", 1);
-    pos.add("debug_mode", 1);
 
     po::options_description all;
     all.add(alldesc);
@@ -606,13 +595,6 @@ void program_options(int argc, char* argv[], int& pattern_length, std::string& t
     } else {
         std::cout << "pattern_length was not set.\n";
     }
-
-    if (vm.count("debug_mode")) {
-        std::cout << "debug mode was set to " 
-        << vm["debug_mode"].as<bool>() << ".\n";
-    } else {
-        std::cout << "debug_mode was not set.\n";
-    }
 }
 
 std::string read_file(std::string file_name, unsigned int max_length){
@@ -633,6 +615,7 @@ std::string read_file(std::string file_name, unsigned int max_length){
 }
 
 int final_check(std::vector<std::string> text_vector, std::string pattern){
+    //std::cout << "pattern:    " << pattern << std::endl;
     int result = 0;
     std::string temp = "";
     std::string rev_text = "";
@@ -663,15 +646,13 @@ int final_check(std::vector<std::string> text_vector, std::string pattern){
                 std::cout << temp << std::endl;
             }
         }
-        else{
-            std::cout << temp << std::endl;
-        }
     }
 
     return result;
 }
 
 int main(int argc, char** argv){
+
     int pattern_length = 0;
     std::string text_file_name = "";
     int text_length = 0;
@@ -689,35 +670,94 @@ int main(int argc, char** argv){
     std::string text_number = letter_to_number(text_letter);
     std::string pattern_number = letter_to_number(pattern_letter);
 
-    // randomly generate the prime number based on the input.
-    double t = pattern_number.length();
+    int t = pattern_number.length();
     unsigned int biggest = text_length * t;
+
+    double count_zero_total = 0;
+    double count_one_total = 0;
+
     auto start = std::chrono::high_resolution_clock::now();
-    //for(int i = 0; i < 3; i++){
-    
-    //std::cout << pattern_number  <<std::endl;
-    //text_number = "23434";
-    SieveOfAtkin(biggest);
-    //prime_base = 399989;
-    //base = 377789;
-    //text_number = "3434";
-    //pattern_number = "3434";
-    std::cout << "prime base  p: " << prime_base << std::endl;
-    std::cout << "base   r:   " << base <<std::endl;
-    count_pattern(text_number, pattern_number);
-    //}
     auto end = std::chrono::high_resolution_clock::now();
 
-    std::cout << "Distance zero:   " <<(count_zero - 1)<< std::endl;
-    std::cout << "Distance one:   " <<count_one << std::endl;
-    std::cout << "vector size:    " << found_text.size() << std::endl;
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end - start ).count();
-    std::cout << std::setprecision(9) << "milliseconds:  " << duration << std::endl;
+    unsigned long duration = 0;
+    unsigned long total_duration = 0;
+    unsigned long average_duration = 0;
 
-    // std::cout << "number of false match:    " << false_match << std::endl;
+    double correct_total = 0;
+    unsigned int different_total = 0;
+
+    int total = 10;
+    for(int i = 0; i < total; i++){
+        SieveOfAtkin(biggest);
+
+        start = std::chrono::high_resolution_clock::now();
+        count_pattern(text_number, pattern_number);
+        end = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>( end - start ).count();
+        total_duration += duration;
+        count_zero_total += (count_zero - 1);
+        count_one_total += count_one;
+        correct_total += final_check(found_text, pattern_number);
+        different_total += one_round_different; 
+    }
+
+    std::cout << std::setprecision(9) << "milliseconds:  " << total_duration/total << std::endl;
+    std::cout << "Distance zero:   " << count_zero_total/total<< std::endl;
+    std::cout << "Distance one:   " << count_one_total/total << std::endl;
+    std::cout << "correct size:   " << correct_total / total << std::endl;
+    std::cout << "different total :   "<< one_round_different/ total << std::endl;
     
-    std::cout << final_check(found_text, pattern_number)<<std::endl;
 
+
+    /**
+    int pattern_length;
+    std::string text_file_name;
+    int text_length;
+    program_options(argc, argv, pattern_length, text_file_name, text_length, debug_mode);
+
+    std::string text_letter = read_file(text_file_name, text_length);
+    std::string text_number = letter_to_number(text_letter);
+
+    std::string pattern_number = "";
+
+    int t = pattern_length;
+    unsigned int biggest = text_length * t;
+    
+    unsigned int count_zero_total = 0;
+    unsigned int count_one_total = 0;
+    auto start = std::chrono::high_resolution_clock::now();
+    auto end = std::chrono::high_resolution_clock::now();
+    unsigned long duration = 0;
+    unsigned long total_duration = 0;
+    unsigned long average_duration = 0;
+
+    int total = 10;
+
+    int correct_total = 0;
+    unsigned int different_total = 0;
+
+    for(int i = 0; i < total; i++){
+        SieveOfAtkin(biggest);
+        pattern_number = generation(&text_number, 100, pattern_length);
+        //std::cout << "finish data generation " << std::endl;
+
+        start = std::chrono::high_resolution_clock::now();
+        count_pattern(text_number, pattern_number);
+        end = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>( end - start ).count();
+        //std::cout << duration << std::endl;
+        total_duration += duration;
+        count_zero_total += count_zero;
+        count_one_total += count_one;
+        correct_total += final_check(found_text, pattern_number);
+        different_total += one_round_different; 
+    }
+    std::cout << std::setprecision(9) << "milliseconds:  " << total_duration/total << std::endl;
+    std::cout << "Distance zero:   " <<count_zero_total/total<< std::endl;
+    std::cout << "Distance one:   " <<count_one_total/total << std::endl;
+    std::cout << "correct size:   " << correct_total / total << std::endl;
+    std::cout << "different total :   "<< one_round_different/ total << std::endl;
+    **/
 
     return 0;
 }
