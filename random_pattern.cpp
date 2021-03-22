@@ -37,12 +37,12 @@ std::string * text_number_array;
 bool debug_mode = false;
 
 unsigned int false_match = 0;
-unsigned int count_zero = 0;
-unsigned int count_one = 0;
+unsigned int letter_check_count_zero = 0;
+unsigned int letter_check_count_one = 0;
 
 unsigned int one_round_different = 0;
 
-std::vector<std::string> found_text;
+std::vector<std::string> letter_check_found_text;
 
 std::map<std::string, std::string> create_letterMap(){
     std::map<std::string, std::string> letterMap;
@@ -205,7 +205,7 @@ unsigned int mul(unsigned int a, unsigned int b){
 }
 
 
-void identify_different_blocks(unsigned int * first, unsigned int * last, bool * exist_difference){
+void letter_check_identify_different_blocks(unsigned int * first, unsigned int * last, bool * exist_difference){
     * exist_difference = false;
     * first = 0;
     * last = 0;
@@ -213,12 +213,12 @@ void identify_different_blocks(unsigned int * first, unsigned int * last, bool *
     for(int i = 0; i < number_blocks; ++i){
         // if the fingerprint of two blocks are equal to each. we will check the real content.
         if(text_fingerprint_array[i] == pattern_fingerprint_array[i]){
-            //if(text_number_array[i] != pattern_number_array[i]){
-            //    * first = i;
-            //    * exist_difference = true;
-            //    false_match += 1;
-            //    break;
-            //}  
+            if(text_number_array[i] != pattern_number_array[i]){
+                * first = i;
+                * exist_difference = true;
+                false_match += 1;
+                break;
+            }  
         }
         else{
             * first = i;
@@ -229,11 +229,11 @@ void identify_different_blocks(unsigned int * first, unsigned int * last, bool *
     // fnd the last block index
     for(int i = number_blocks - 1; i >= 0; --i){
         if(text_fingerprint_array[i] == pattern_fingerprint_array[i]){
-            //if(text_number_array[i] != pattern_number_array[i]){
-            //    * last = i;
-            //    false_match += 1;
-            //    break;
-            //}  
+            if(text_number_array[i] != pattern_number_array[i]){
+                * last = i;
+                false_match += 1;
+                break;
+            }  
         }
         else{
             * last = i;
@@ -290,7 +290,7 @@ void retrieve_array(unsigned int * fingerprint_array, std::string * number_array
     }
 }
 
-bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite, 
+bool letter_check_reversal_exists(unsigned int first_block_index, unsigned int first_offsite, 
                     unsigned int last_block_index, unsigned int last_offsite){
     
     //based on the index and offsite to retrieve the part of the text_finger_array.
@@ -423,13 +423,13 @@ bool reversal_exists(unsigned int first_block_index, unsigned int first_offsite,
             return false;
         }
     }
-    //for(unsigned int i = 0; i <= last_block_index - first_block_index; ++i){
-    //    if(temp_text_number_array[i] != temp_reversal_pattern_number_array[i]){
+    for(unsigned int i = 0; i <= last_block_index - first_block_index; ++i){
+        if(temp_text_number_array[i] != temp_reversal_pattern_number_array[i]){
     //        false_match += 1;
             //std::cout << "false" << std::endl;
-    //        return false;
-    //    }
-    //}
+            return false;
+        }
+    }
     return true;
 }
 
@@ -470,11 +470,11 @@ std::string convert_array_to_string(std::string* array, int length){
     return result;
 }
 
-void count_pattern(std::string text, std::string pattern){
+void letter_check_count_pattern(std::string text, std::string pattern){
     false_match = 0;
-    count_zero = 0;
-    count_one = 0;
-    found_text.clear();
+    letter_check_count_zero = 0;
+    letter_check_count_one = 0;
+    letter_check_found_text.clear();
     one_round_different = 0;
 
     unsigned int block_length = sqrt(pattern.size());
@@ -519,7 +519,7 @@ void count_pattern(std::string text, std::string pattern){
 
     while(true){
         exist_difference = false;
-        identify_different_blocks(first, last, exist_pointer);
+        letter_check_identify_different_blocks(first, last, exist_pointer);
 
         if(exist_difference){
             // find two corresponding offsite in the blocks.
@@ -529,15 +529,15 @@ void count_pattern(std::string text, std::string pattern){
             last_offsite = find_last_index_linear(text_number_array[last_block_index], 
                             pattern_number_array[last_block_index], block_length_array[last_block_index]);
             
-            if (reversal_exists(first_block_index, first_offsite, last_block_index, last_offsite))
+            if (letter_check_reversal_exists(first_block_index, first_offsite, last_block_index, last_offsite))
             {
-                count_one += 1; 
-                found_text.push_back(text.substr(index, pattern.length()));
+                letter_check_count_one += 1; 
+                letter_check_found_text.push_back(text.substr(index, pattern.length()));
             }
         }
         else{
 
-            count_zero += 1;
+            letter_check_count_zero += 1;
         }
 
         index ++;
@@ -673,8 +673,8 @@ int main(int argc, char** argv){
     int t = pattern_number.length();
     unsigned int biggest = text_length * t;
 
-    double count_zero_total = 0;
-    double count_one_total = 0;
+    double letter_check_count_zero_total = 0;
+    double letter_check_count_one_total = 0;
 
     auto start = std::chrono::high_resolution_clock::now();
     auto end = std::chrono::high_resolution_clock::now();
@@ -691,19 +691,19 @@ int main(int argc, char** argv){
         SieveOfAtkin(biggest);
 
         start = std::chrono::high_resolution_clock::now();
-        count_pattern(text_number, pattern_number);
+        letter_check_count_pattern(text_number, pattern_number);
         end = std::chrono::high_resolution_clock::now();
         duration = std::chrono::duration_cast<std::chrono::milliseconds>( end - start ).count();
         total_duration += duration;
-        count_zero_total += (count_zero - 1);
-        count_one_total += count_one;
-        correct_total += final_check(found_text, pattern_number);
+        letter_check_count_zero_total += (letter_check_count_zero - 1);
+        letter_check_count_one_total += letter_check_count_one;
+        correct_total += final_check(letter_check_found_text, pattern_number);
         different_total += one_round_different; 
     }
 
     std::cout << std::setprecision(9) << "milliseconds:  " << total_duration/total << std::endl;
-    std::cout << "Distance zero:   " << count_zero_total/total<< std::endl;
-    std::cout << "Distance one:   " << count_one_total/total << std::endl;
+    std::cout << "Distance zero:   " << letter_check_count_zero_total/total<< std::endl;
+    std::cout << "Distance one:   " << letter_check_count_one_total/total << std::endl;
     std::cout << "correct size:   " << correct_total / total << std::endl;
     std::cout << "different total :   "<< one_round_different/ total << std::endl;
     
