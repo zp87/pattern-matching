@@ -491,6 +491,7 @@ void program_options(int argc, char* argv[], int& pattern_length, std::string& t
 }
 
 int main(int argc, char** argv){
+    /**
     int pattern_length;
     std::string text_file_name;
     int text_length;
@@ -511,8 +512,7 @@ int main(int argc, char** argv){
     float time_taken = end - start;
     std::cout << std::setprecision(9) << "milliseconds:  " << time_taken << std::endl;
 
-    // the max unsigned int is to 13. the block length can be 14
-    // the max unsigned long int is to 20.  the block length can be 21.
-    // the max unsigned long long int is to 27. the block length can be 28.
-    return 0;
+    **/
+
+    
 }

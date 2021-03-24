@@ -44,6 +44,12 @@ unsigned int one_round_different = 0;
 
 std::vector<std::string> letter_check_found_text;
 
+/**  no letter check   **/
+unsigned int no_letter_count_zero = 0;
+unsigned int no_letter_count_one = 0;
+
+std::vector<std::string> no_letter_found_text;
+
 std::map<std::string, std::string> create_letterMap(){
     std::map<std::string, std::string> letterMap;
     letterMap["A"] = "1";
@@ -470,20 +476,13 @@ std::string convert_array_to_string(std::string* array, int length){
     return result;
 }
 
-void letter_check_count_pattern(std::string text, std::string pattern){
+void letter_check_count_pattern(std::string text, std::string pattern, unsigned int block_length){
     false_match = 0;
     letter_check_count_zero = 0;
     letter_check_count_one = 0;
     letter_check_found_text.clear();
     one_round_different = 0;
 
-    unsigned int block_length = sqrt(pattern.size());
-    if (block_length * block_length < pattern.size()){
-        block_length += 1;
-    }
-
-    //unsigned int block_length = pattern.size();
-    
     number_blocks = pattern.size()/block_length;
     pattern.size() % block_length > 0 ? number_blocks += 1: NULL;
 
@@ -549,6 +548,247 @@ void letter_check_count_pattern(std::string text, std::string pattern){
     }
     
     first = NULL, last = NULL, exist_pointer = NULL;
+
+}
+
+/** No letter check **/
+
+bool no_letter_reversal_exists(unsigned int first_block_index, unsigned int first_offsite, 
+                    unsigned int last_block_index, unsigned int last_offsite){
+    
+    //based on the index and offsite to retrieve the part of the text_finger_array.
+    unsigned int temp_text_fingerprint_array[last_block_index - first_block_index + 1];
+    std::string temp_text_number_array[last_block_index - first_block_index + 1];
+    retrieve_array(text_fingerprint_array, text_number_array, temp_text_fingerprint_array, temp_text_number_array, 
+                    first_block_index, first_offsite, last_block_index, last_offsite, block_length_array);
+    
+    unsigned int temp_reversal_pattern_fingerprint_array[last_block_index - first_block_index + 1];
+    std::string temp_reversal_pattern_number_array[last_block_index - first_block_index + 1];
+    unsigned int reversed_first_offsite = block_length_array[last_block_index] - last_offsite - 1;
+    unsigned int reversed_last_offsite = block_length_array[first_block_index] - first_offsite - 1;
+    retrieve_array(reversal_pattern_fingerprint_array, reversal_pattern_number_array, temp_reversal_pattern_fingerprint_array,
+                    temp_reversal_pattern_number_array, number_blocks - last_block_index - 1, reversed_first_offsite,
+                    number_blocks - first_block_index - 1, reversed_last_offsite, reversed_block_length_array);
+    
+    if(first_block_index != last_block_index)  {
+        // off site
+        unsigned int different_offsite = 0;
+        int index = 0;
+        unsigned int temp_fingerprint_store = 0;
+        std::string temp_number_store;
+        unsigned int move_fingerprint = 0;
+        std::string move_number;
+
+        //move temp text array forward
+        if(block_length_array[first_block_index] - first_offsite < block_length_array[last_block_index] - reversed_first_offsite){
+
+            temp_fingerprint_store = 0;
+            temp_number_store = "";
+            move_fingerprint = 0;
+            temp_number_store = "";
+            //different_offsite = first_offsite - reversed_first_offsite;
+            different_offsite = block_length_array[last_block_index] - reversed_first_offsite - block_length_array[first_block_index] + first_offsite;
+            index = last_block_index - first_block_index;
+
+            while(index >= 0){
+                if(index == last_block_index - first_block_index){
+                    move_number = temp_text_number_array[index].substr(0, different_offsite);
+                    move_fingerprint = fingerprint_computation(move_number);
+
+                    temp_text_number_array[index] = temp_text_number_array[index].substr(different_offsite, temp_text_number_array[index].length() - different_offsite);
+
+                    temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] + prime_base - (mul(move_fingerprint , pow_mod(base, last_offsite + 1 - different_offsite))) % prime_base;
+                    temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
+
+                    index -- ;
+                    continue;
+                }
+                if(index == 0){
+                    temp_text_number_array[index] = temp_text_number_array[index] + move_number;
+
+                    temp_text_fingerprint_array[index] = ( mul( temp_text_fingerprint_array[index] , pow_mod(base, different_offsite))) % prime_base + move_fingerprint;
+                    temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
+
+                    index --;
+                    continue;
+                }
+                temp_number_store = temp_text_number_array[index];
+                temp_fingerprint_store = temp_text_fingerprint_array[index];
+
+                temp_text_number_array[index] = temp_number_store.substr(different_offsite, temp_number_store.length() - different_offsite) + move_number;
+
+                temp_text_fingerprint_array[index] = (temp_fingerprint_store + prime_base) - mul(fingerprint_computation(temp_number_store.substr(0, different_offsite)) , pow_mod(base, block_length_array[index + first_block_index] - different_offsite)) % prime_base;
+                temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
+                temp_text_fingerprint_array[index] = mul(temp_text_fingerprint_array[index] , pow_mod(base, different_offsite)) + move_fingerprint;
+
+                temp_text_fingerprint_array[index] = temp_text_fingerprint_array[index] % prime_base;
+
+
+                move_number = temp_number_store.substr(0, different_offsite);
+                move_fingerprint = fingerprint_computation(move_number);
+                index --;
+            }
+        }
+
+        //move temp reversed pattern array forward
+        else if (block_length_array[first_block_index] - first_offsite > block_length_array[last_block_index] - reversed_first_offsite){
+            temp_fingerprint_store = 0;
+            temp_number_store = "";
+            move_fingerprint = 0;
+            temp_number_store = "";
+            //different_offsite = reversed_first_offsite - first_offsite;
+            different_offsite = block_length_array[first_block_index] - first_offsite - block_length_array[last_block_index] + reversed_first_offsite;
+            index = last_block_index - first_block_index;
+
+            while(index >= 0){
+                if(index == last_block_index - first_block_index){
+                    move_number = temp_reversal_pattern_number_array[index].substr(0, different_offsite);
+                    move_fingerprint = fingerprint_computation(move_number);
+
+                    temp_reversal_pattern_number_array[index] = temp_reversal_pattern_number_array[index].substr(different_offsite, temp_reversal_pattern_number_array[index].length() - different_offsite);
+
+                    temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] + prime_base - mul(move_fingerprint , pow_mod(base, reversed_last_offsite + 1 - different_offsite)) % prime_base;
+                    temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
+
+                    index -- ;
+                    continue;
+                }
+                if(index == 0){
+                    temp_reversal_pattern_number_array[index] = temp_reversal_pattern_number_array[index] + move_number;
+
+                    temp_reversal_pattern_fingerprint_array[index] = mul(temp_reversal_pattern_fingerprint_array[index] , pow_mod(base, different_offsite)) % prime_base + move_fingerprint;
+                    temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
+
+                    index --;
+                    continue;
+                }
+                temp_number_store = temp_reversal_pattern_number_array[index];
+                temp_fingerprint_store = temp_reversal_pattern_fingerprint_array[index];
+
+                temp_reversal_pattern_number_array[index] = temp_number_store.substr(different_offsite, temp_number_store.length() - different_offsite) + move_number;
+            
+                temp_reversal_pattern_fingerprint_array[index] = (temp_fingerprint_store + prime_base) - mul(fingerprint_computation(temp_number_store.substr(0, different_offsite)) , pow_mod(base, reversed_block_length_array[index + first_block_index] - different_offsite)) % prime_base;
+                temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
+
+                temp_reversal_pattern_fingerprint_array[index] = mul(temp_reversal_pattern_fingerprint_array[index] , pow_mod(base, different_offsite)) + move_fingerprint;
+                temp_reversal_pattern_fingerprint_array[index] = temp_reversal_pattern_fingerprint_array[index] % prime_base;
+
+                move_number = temp_number_store.substr(0, different_offsite);
+                move_fingerprint = fingerprint_computation(move_number);
+                index --;
+            }
+        }
+        one_round_different += different_offsite;
+    }
+
+    for(unsigned int i = 0; i <= last_block_index - first_block_index; ++i){
+        if(temp_text_fingerprint_array[i] != temp_reversal_pattern_fingerprint_array[i]){
+            return false;
+        }
+    }
+    //for(unsigned int i = 0; i <= last_block_index - first_block_index; ++i){
+    //    if(temp_text_number_array[i] != temp_reversal_pattern_number_array[i]){
+    //        false_match += 1;
+    //        //std::cout << "false" << std::endl;
+    //        return false;
+    //    }
+    //}
+    return true;
+}
+
+void no_letter_identify_different_blocks(unsigned int * first, unsigned int * last, bool * exist_difference){
+    * exist_difference = false;
+    * first = 0;
+    * last = 0;
+    // find the first block index
+    for(int i = 0; i < number_blocks; ++i){
+        if(text_fingerprint_array[i] != pattern_fingerprint_array[i]){
+            * first = i;
+            * exist_difference = true;
+            break;
+        }
+    }
+    // fnd the last block index
+    for(int i = number_blocks - 1; i >= 0; --i){
+        if(text_fingerprint_array[i] != pattern_fingerprint_array[i]){
+            * last = i;
+            break;
+        }
+    }
+}
+
+void no_check_count_pattern(std::string text, std::string pattern, unsigned int block_length){
+    false_match = 0;
+    no_letter_count_zero = 0;
+    no_letter_count_one = 0;
+    no_letter_found_text.clear();
+    one_round_different = 0;
+    
+    number_blocks = pattern.size()/block_length;
+    pattern.size() % block_length > 0 ? number_blocks += 1: NULL;
+
+    // initial and compute the each block's length;
+    block_length_array_generation(pattern, block_length);
+    
+    // compute fingerprint array for pattern
+    pattern_fingerprint_array = new unsigned int[number_blocks]; 
+    pattern_number_array = new std::string[number_blocks];
+    fingerprint_array_computation(pattern, pattern_fingerprint_array, pattern_number_array);
+
+    //compute the reversal fingerprint array for pattern
+    reversal_pattern_fingerprint_array = new unsigned int[number_blocks];
+    reversal_pattern_number_array = new std::string[number_blocks];
+    reverse_array_entry(pattern_number_array, reversal_pattern_number_array, reversal_pattern_fingerprint_array);
+
+    text_fingerprint_array = new unsigned int[number_blocks];
+    text_number_array = new std::string[number_blocks];
+
+    // the first and last blocks with the different fingerprint number
+    unsigned int first_block_index = 0, last_block_index = 0;
+    // first offsite index in first different block.
+    // last offsite index in last different block.
+    unsigned int first_offsite = 0, last_offsite = 0;
+
+    bool exist_difference = false;
+    unsigned int * first = &first_block_index, * last = &last_block_index;
+    bool * exist_pointer = & exist_difference;
+    unsigned int index = 0;
+    // initial part.
+    fingerprint_array_computation(text.substr(index, pattern.size()), text_fingerprint_array, text_number_array);
+    // loop part.
+
+    while(true){
+        exist_difference = false;
+        no_letter_identify_different_blocks(first, last, exist_pointer);
+
+        if(exist_difference){
+            // find two corresponding offsite in the blocks.
+            first_offsite = find_first_index_linear(text_number_array[first_block_index], 
+                            pattern_number_array[first_block_index], block_length_array[first_block_index]);
+
+            last_offsite = find_last_index_linear(text_number_array[last_block_index], 
+                            pattern_number_array[last_block_index], block_length_array[last_block_index]);
+            
+            if (no_letter_reversal_exists(first_block_index, first_offsite, last_block_index, last_offsite))
+            {
+                no_letter_count_one += 1; 
+                no_letter_found_text.push_back(text.substr(index, pattern.length()));
+            }
+        }
+        else{
+            no_letter_count_zero += 1;
+        }
+
+        index ++;
+        if(index >= text.size() - pattern.size() + 1){
+            break;
+        }
+        //slide window
+        slide_window(text.substr(pattern.size() + index - 1, 1));
+    }
+    
+    first = NULL, last = NULL, exist_pointer = NULL;
+
 
 }
 
@@ -652,15 +892,10 @@ int final_check(std::vector<std::string> text_vector, std::string pattern){
 }
 
 int main(int argc, char** argv){
-
+    
     int pattern_length = 0;
     std::string text_file_name = "";
     int text_length = 0;
-    //unsigned int prime_base = 5;
-    //std::cout << "test  " << std::endl;
-
-    //std::cout << mul(100 , 500) << std::endl;
-    //return 0;
 
     program_options(argc, argv, pattern_length, text_file_name, text_length, debug_mode);
 
@@ -671,6 +906,15 @@ int main(int argc, char** argv){
     std::string pattern_number = letter_to_number(pattern_letter);
 
     int t = pattern_number.length();
+
+    unsigned int required_pattern_block_length = sqrt(pattern_number.length());
+    if (required_pattern_block_length * required_pattern_block_length < pattern_number.length()){
+        required_pattern_block_length += 1;
+    }
+
+    //unsigned int required_pattern_block_length = pattern.length();
+
+
     unsigned int biggest = text_length * t;
 
     double letter_check_count_zero_total = 0;
@@ -680,84 +924,145 @@ int main(int argc, char** argv){
     auto end = std::chrono::high_resolution_clock::now();
 
     unsigned long duration = 0;
-    unsigned long total_duration = 0;
-    unsigned long average_duration = 0;
+    unsigned long letter_check_total_duration = 0;
 
-    double correct_total = 0;
-    unsigned int different_total = 0;
+    double no_letter_count_zero_total = 0;
+    double no_letter_count_one_total = 0;
+    unsigned long no_letter_total_duration = 0;
+
+    double letter_check_correct_total = 0;
+    double no_letter_correct_total = 0;
+    unsigned int letter_check_different_total = 0;
+    unsigned int no_letter_different_total = 0;
 
     int total = 10;
     for(int i = 0; i < total; i++){
         SieveOfAtkin(biggest);
 
         start = std::chrono::high_resolution_clock::now();
-        letter_check_count_pattern(text_number, pattern_number);
+        letter_check_count_pattern(text_number, pattern_number, required_pattern_block_length);
         end = std::chrono::high_resolution_clock::now();
         duration = std::chrono::duration_cast<std::chrono::milliseconds>( end - start ).count();
-        total_duration += duration;
+        letter_check_total_duration += duration;
         letter_check_count_zero_total += (letter_check_count_zero - 1);
         letter_check_count_one_total += letter_check_count_one;
-        correct_total += final_check(letter_check_found_text, pattern_number);
-        different_total += one_round_different; 
-    }
+        letter_check_correct_total += final_check(letter_check_found_text, pattern_number);
+        letter_check_different_total += one_round_different;
 
-    std::cout << std::setprecision(9) << "milliseconds:  " << total_duration/total << std::endl;
+        start = std::chrono::high_resolution_clock::now();
+        no_check_count_pattern(text_number, pattern_number, required_pattern_block_length);
+        end = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>( end - start ).count();
+        no_letter_total_duration += duration;
+        no_letter_count_zero_total += (no_letter_count_zero - 1);
+        no_letter_count_one_total += no_letter_count_one;
+        no_letter_correct_total += final_check(no_letter_found_text, pattern_number);
+        no_letter_different_total += one_round_different;
+
+    }
+    std::cout << "letter check    " << std::endl;
+    std::cout << std::setprecision(9) << "milliseconds:  " << letter_check_total_duration/total << std::endl;
     std::cout << "Distance zero:   " << letter_check_count_zero_total/total<< std::endl;
     std::cout << "Distance one:   " << letter_check_count_one_total/total << std::endl;
-    std::cout << "correct size:   " << correct_total / total << std::endl;
-    std::cout << "different total :   "<< one_round_different/ total << std::endl;
-    
+    std::cout << "correct size:   " << letter_check_correct_total / total << std::endl;
+    std::cout << "different total :   "<< no_letter_different_total/ total << std::endl;
 
+    std::cout << "--------------------" << std::endl;
+    std::cout << "no letter check    " << std::endl;
+    std::cout << std::setprecision(9) << "milliseconds:  " << no_letter_total_duration/total << std::endl;
+    std::cout << "Distance zero:   " << no_letter_count_zero_total/total<< std::endl;
+    std::cout << "Distance one:   " << no_letter_count_one_total/total << std::endl;
+    std::cout << "correct size:   " << no_letter_correct_total / total << std::endl;
+    std::cout << "different total :   "<< no_letter_different_total/ total << std::endl;
+    
+    /** -----------------------**/
 
     /**
-    int pattern_length;
-    std::string text_file_name;
-    int text_length;
+    int pattern_length = 0;
+    std::string text_file_name = "";
+    int text_length = 0;
+
     program_options(argc, argv, pattern_length, text_file_name, text_length, debug_mode);
 
     std::string text_letter = read_file(text_file_name, text_length);
+    std::string pattern_letter = read_file(text_file_name, pattern_length);
+
     std::string text_number = letter_to_number(text_letter);
+    std::string pattern_number = letter_to_number(pattern_letter);
 
-    std::string pattern_number = "";
+    int t = pattern_number.length();
 
-    int t = pattern_length;
+    unsigned int required_pattern_block_length = sqrt(pattern_number.length());
+    if (required_pattern_block_length * required_pattern_block_length < pattern_number.length()){
+        required_pattern_block_length += 1;
+    }
+
+    //unsigned int required_pattern_block_length = pattern.length();
+
+
     unsigned int biggest = text_length * t;
-    
-    unsigned int count_zero_total = 0;
-    unsigned int count_one_total = 0;
+
+    double letter_check_count_zero_total = 0;
+    double letter_check_count_one_total = 0;
+
     auto start = std::chrono::high_resolution_clock::now();
     auto end = std::chrono::high_resolution_clock::now();
+
     unsigned long duration = 0;
-    unsigned long total_duration = 0;
-    unsigned long average_duration = 0;
+    unsigned long letter_check_total_duration = 0;
+
+    double no_letter_count_zero_total = 0;
+    double no_letter_count_one_total = 0;
+    unsigned long no_letter_total_duration = 0;
+
+    double letter_check_correct_total = 0;
+    double no_letter_correct_total = 0;
+    unsigned int letter_check_different_total = 0;
+    unsigned int no_letter_different_total = 0;
 
     int total = 10;
-
-    int correct_total = 0;
-    unsigned int different_total = 0;
-
     for(int i = 0; i < total; i++){
         SieveOfAtkin(biggest);
         pattern_number = generation(&text_number, 100, pattern_length);
-        //std::cout << "finish data generation " << std::endl;
 
         start = std::chrono::high_resolution_clock::now();
-        count_pattern(text_number, pattern_number);
+        letter_check_count_pattern(text_number, pattern_number, required_pattern_block_length);
         end = std::chrono::high_resolution_clock::now();
         duration = std::chrono::duration_cast<std::chrono::milliseconds>( end - start ).count();
-        //std::cout << duration << std::endl;
-        total_duration += duration;
-        count_zero_total += count_zero;
-        count_one_total += count_one;
-        correct_total += final_check(found_text, pattern_number);
-        different_total += one_round_different; 
+        letter_check_total_duration += duration;
+        letter_check_count_zero_total += (letter_check_count_zero);
+        letter_check_count_one_total += letter_check_count_one;
+        letter_check_correct_total += final_check(letter_check_found_text, pattern_number);
+        letter_check_different_total += one_round_different;
+
+        start = std::chrono::high_resolution_clock::now();
+        no_check_count_pattern(text_number, pattern_number, required_pattern_block_length);
+        end = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>( end - start ).count();
+        no_letter_total_duration += duration;
+        no_letter_count_zero_total += (no_letter_count_zero);
+        no_letter_count_one_total += no_letter_count_one;
+        no_letter_correct_total += final_check(no_letter_found_text, pattern_number);
+        no_letter_different_total += one_round_different;
+
     }
-    std::cout << std::setprecision(9) << "milliseconds:  " << total_duration/total << std::endl;
-    std::cout << "Distance zero:   " <<count_zero_total/total<< std::endl;
-    std::cout << "Distance one:   " <<count_one_total/total << std::endl;
-    std::cout << "correct size:   " << correct_total / total << std::endl;
-    std::cout << "different total :   "<< one_round_different/ total << std::endl;
+    std::cout << "letter check    " << std::endl;
+    std::cout << std::setprecision(9) << "milliseconds:  " << letter_check_total_duration/total << std::endl;
+    std::cout << "Distance zero:   " << letter_check_count_zero_total/total<< std::endl;
+    std::cout << "Distance one:   " << letter_check_count_one_total/total << std::endl;
+    std::cout << "correct size:   " << letter_check_correct_total / total << std::endl;
+    std::cout << "different total :   "<< no_letter_different_total/ total << std::endl;
+
+    std::cout << "--------------------" << std::endl;
+    std::cout << "no letter check    " << std::endl;
+    std::cout << std::setprecision(9) << "milliseconds:  " << no_letter_total_duration/total << std::endl;
+    std::cout << "Distance zero:   " << no_letter_count_zero_total/total<< std::endl;
+    std::cout << "Distance one:   " << no_letter_count_one_total/total << std::endl;
+    std::cout << "correct size:   " << no_letter_correct_total / total << std::endl;
+    std::cout << "different total :   "<< no_letter_different_total/ total << std::endl;
+    
     **/
+
 
     return 0;
 }
