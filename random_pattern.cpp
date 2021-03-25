@@ -184,10 +184,10 @@ void reverse_array_entry(std::string * original_array, std::string * reverse_arr
 unsigned int mul(unsigned int a, unsigned int b){
     unsigned long result = 0;
     unsigned long index = 0;
-    unsigned long max_unsigned_long_size = std::numeric_limits<unsigned long>::max();
+    unsigned long long max_unsigned_long_size = std::numeric_limits<unsigned long long>::max();
 
     unsigned int max = std::max(a,b);
-    unsigned long gap = max_unsigned_long_size / max  - 5;
+    unsigned long long gap = max_unsigned_long_size / max  - 5;
     //for(int i = 0; i < b; i++){
     //    result += a;
     //    result = result % prime_base;
@@ -196,7 +196,6 @@ unsigned int mul(unsigned int a, unsigned int b){
         result = (a * (unsigned long)b) % prime_base;
         return (unsigned int)result;
     }
-    std::cout << "mul need to modfiy" << std::endl;
     while(index < b - gap){    
         result += a * gap;
         result = result % prime_base;
